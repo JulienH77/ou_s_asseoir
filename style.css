@@ -12,7 +12,14 @@ html, body {
 }
 
 /* bouton recentrage */
+#recenterBtn,
+#panel {
+  z-index: 1000;
+}
 
+.leaflet-container {
+  z-index: 0;
+}
 #recenterBtn {
   position: absolute;
   right: 15px;
