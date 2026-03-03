@@ -10,9 +10,9 @@ L.tileLayer(
 L.control.zoom({ position: 'topright' }).addTo(map);
 
 
-// ========================
+// =======================
 // VARIABLES
-// ========================
+// =======================
 
 let userLatLng = null;
 let userMarker = null;
@@ -21,9 +21,9 @@ let routeLayer = null;
 let bancs = [];
 
 
-// ========================
-// ICON SVG BANCS
-// ========================
+// =======================
+// ICON SVG BENCH
+// =======================
 
 const benchIcon = L.divIcon({
   html: `
@@ -37,9 +37,9 @@ const benchIcon = L.divIcon({
 });
 
 
-// ========================
+// =======================
 // CHARGEMENT BANCS
-// ========================
+// =======================
 
 fetch("bancs.geojson")
 .then(res => res.json())
@@ -47,18 +47,19 @@ fetch("bancs.geojson")
 
   data.features.forEach(f => {
 
+    if (f.properties.TYPE.toLowerCase().includes("bus")) return;
+
     const latlng = [
       f.geometry.coordinates[1],
       f.geometry.coordinates[0]
     ];
 
-    const marker = L.marker(latlng, { icon: benchIcon })
+    L.marker(latlng, { icon: benchIcon })
       .bindPopup(f.properties.TYPE)
       .addTo(map);
 
     bancs.push({
-      latlng: L.latLng(latlng),
-      type: f.properties.TYPE
+      latlng: L.latLng(latlng)
     });
 
   });
@@ -66,9 +67,9 @@ fetch("bancs.geojson")
 });
 
 
-// ========================
-// GEOLOCALISATION (SANS AUTO-ZOOM)
-// ========================
+// =======================
+// GEOLOCALISATION
+// =======================
 
 map.locate({
   watch: true,
@@ -108,9 +109,9 @@ map.on("locationfound", e => {
 });
 
 
-// ========================
-// BOUTON RECENTRAGE
-// ========================
+// =======================
+// RECENTRAGE
+// =======================
 
 document.getElementById("recenterBtn").addEventListener("click", () => {
   if (userLatLng) {
@@ -119,50 +120,51 @@ document.getElementById("recenterBtn").addEventListener("click", () => {
 });
 
 
-// ========================
-// TROUVER PLUS PROCHE (RÉSEAU)
-// ========================
+// =======================
+// TROUVER PLUS PROCHE RAPIDE
+// =======================
 
 document.getElementById("findBtn").addEventListener("click", async () => {
 
-  if (!userLatLng) return;
+  if (!userLatLng || bancs.length === 0) return;
 
-  let best = null;
+  document.getElementById("distance").innerText = "Recherche...";
+
+  // Construction URL table OSRM
+  const coords = [
+    `${userLatLng.lng},${userLatLng.lat}`,
+    ...bancs.map(b => `${b.latlng.lng},${b.latlng.lat}`)
+  ].join(";");
+
+  const url = `https://router.project-osrm.org/table/v1/foot/${coords}?sources=0`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if (!data.distances) return;
+
+  const distances = data.distances[0].slice(1);
+
   let min = Infinity;
+  let index = -1;
 
-  const candidats = bancs
-    .filter(b => !b.type.toLowerCase().includes("bus"))
-    .sort((a,b) =>
-      map.distance(userLatLng, a.latlng) -
-      map.distance(userLatLng, b.latlng)
-    )
-    .slice(0,5);
-
-  for (let b of candidats) {
-
-    const url = `https://router.project-osrm.org/route/v1/foot/${userLatLng.lng},${userLatLng.lat};${b.latlng.lng},${b.latlng.lat}?overview=false`;
-
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (!data.routes) continue;
-
-    const d = data.routes[0].distance;
-
-    if (d < min) {
+  distances.forEach((d, i) => {
+    if (d !== null && d < min) {
       min = d;
-      best = b.latlng;
+      index = i;
     }
-  }
+  });
 
-  if (best) drawRoute(best, min);
+  if (index >= 0) {
+    drawRoute(bancs[index].latlng, min);
+  }
 
 });
 
 
-// ========================
-// TRACE ITINERAIRE
-// ========================
+// =======================
+// TRACE ROUTE
+// =======================
 
 function drawRoute(dest, distance) {
 
