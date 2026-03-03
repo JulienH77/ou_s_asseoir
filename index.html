@@ -2,8 +2,8 @@
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Banc le plus proche - Chaumont</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bancs Chaumont</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <link rel="stylesheet" href="style.css">
@@ -11,8 +11,14 @@
 <body>
 
 <div id="map"></div>
-<div id="distanceBox"></div>
-<button id="locateBtn">Trouver le banc le plus proche</button>
+
+<div id="bottomPanel">
+    <div id="distanceDisplay">
+        <span class="walker">🚶</span>
+        <span id="distanceText">-- m</span>
+    </div>
+    <button id="findBtn">Trouver le plus proche</button>
+</div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="script.js"></script>
