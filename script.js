@@ -70,15 +70,23 @@ fetch("bancs.geojson")
     const typeRaw = f.properties.TYPE || "autre";
     const t = typeRaw.toLowerCase();
 
-    // Filtrage strict des arrêts de bus
     if (t.includes("bus")) return;
 
     const latlng = [f.geometry.coordinates[1], f.geometry.coordinates[0]];
     const color = getBenchColor(typeRaw);
     
+    // Déterminer la priorité d'affichage
+    let priority = 100; // Par défaut
+    if (t === "autre" || t === "pierre") priority = 10; // Priorité basse
+    if (t.includes("dossier")) priority = 200; // Priorité haute
+
     const marker = L.marker(latlng, { 
-      icon: createBenchIcon(color) 
+      icon: createBenchIcon(color),
+      zIndexOffset: priority // <--- Ajout du zIndex
     }).bindPopup(`${typeRaw}`);
+    
+    // On stocke le type dans le marqueur pour l'utiliser dans le style
+    marker.typeBench = t; 
     
     marker.addTo(benchesLayer);
     bancs.push(L.latLng(latlng));
@@ -93,27 +101,34 @@ fetch("bancs.geojson")
 function updateMarkersStyle() {
   const currentZoom = map.getZoom();
   
-  // 1. Disparition totale si trop dézoomé (ex: zoom < 14)
   if (currentZoom < 14) {
     if (map.hasLayer(benchesLayer)) map.removeLayer(benchesLayer);
   } else {
     if (!map.hasLayer(benchesLayer)) map.addLayer(benchesLayer);
     
-    // 2. Réduction de la taille selon le zoom
-    // On calcule une échelle (ex: 1 à zoom 18, 0.5 à zoom 15)
-    const scale = Math.max(0.4, (currentZoom - 13) / 5);
-    const size = 24 * scale;
+    // Calcul de l'échelle de base (réduite par rapport à votre version précédente)
+    // Ici 18px à zoom 18, environ 8px à zoom 14
+    const baseScale = Math.max(0.3, (currentZoom - 13) / 6);
+    const standardSize = 20 * baseScale; // Réduction de la taille de base de 24 à 20
 
     benchesLayer.eachLayer(marker => {
-      const icon = marker.getIcon();
-      // On met à jour l'élément HTML du marqueur directement pour la performance
       const el = marker.getElement();
       if (el) {
-        el.style.width = `${size}px`;
-        el.style.height = `${size}px`;
-        // Ajustement du centrage
-        el.style.marginLeft = `-${size/2}px`;
-        el.style.marginTop = `-${size/2}px`;
+        // Appliquer un ratio de 0.75 (25% plus petit) pour Pierre/Autre
+        const isSmallType = (marker.typeBench === "autre" || marker.typeBench === "pierre");
+        const finalSize = isSmallType ? (standardSize * 0.75) : standardSize;
+
+        el.style.width = `${finalSize}px`;
+        el.style.height = `${finalSize}px`;
+        el.style.marginLeft = `-${finalSize/2}px`;
+        el.style.marginTop = `-${finalSize/2}px`;
+        
+        // On s'assure que l'icône SVG à l'intérieur suit
+        const svg = el.querySelector('svg');
+        if (svg) {
+          svg.setAttribute('width', finalSize * 0.6);
+          svg.setAttribute('height', finalSize * 0.6);
+        }
       }
     });
   }
