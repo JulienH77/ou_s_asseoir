@@ -34,7 +34,7 @@ const benchIcon = L.divIcon({
 // LOAD BANCS
 // =======================
 
-fetch("bancs.geojson")
+/*fetch("bancs.geojson")
 .then(res => res.json())
 .then(data => {
 
@@ -54,7 +54,64 @@ fetch("bancs.geojson")
     bancs.push(L.latLng(latlng));
   });
 
+});*/
+// Groupe pour gérer tous les marqueurs de bancs ensemble
+const benchesLayer = L.layerGroup().addTo(map);
+
+fetch("bancs.geojson")
+.then(res => res.json())
+.then(data => {
+  data.features.forEach(f => {
+    if (f.properties.TYPE.toLowerCase().includes("bus")) return;
+
+    const latlng = [f.geometry.coordinates[1], f.geometry.coordinates[0]];
+    
+    // Création du marqueur
+    const marker = L.marker(latlng, { icon: benchIcon }).bindPopup(f.properties.TYPE);
+    
+    marker.addTo(benchesLayer);
+    bancs.push(L.latLng(latlng));
+  });
+  
+  // Appliquer le style initial
+  updateMarkersStyle();
 });
+
+// Fonction pour ajuster la visibilité et la taille
+function updateMarkersStyle() {
+  const currentZoom = map.getZoom();
+  
+  // 1. Disparition totale si trop dézoomé (ex: zoom < 14)
+  if (currentZoom < 14) {
+    if (map.hasLayer(benchesLayer)) map.removeLayer(benchesLayer);
+  } else {
+    if (!map.hasLayer(benchesLayer)) map.addLayer(benchesLayer);
+    
+    // 2. Réduction de la taille selon le zoom
+    // On calcule une échelle (ex: 1 à zoom 18, 0.5 à zoom 15)
+    const scale = Math.max(0.4, (currentZoom - 13) / 5);
+    const size = 24 * scale;
+
+    benchesLayer.eachLayer(marker => {
+      const icon = marker.getIcon();
+      // On met à jour l'élément HTML du marqueur directement pour la performance
+      const el = marker.getElement();
+      if (el) {
+        el.style.width = `${size}px`;
+        el.style.height = `${size}px`;
+        // Ajustement du centrage
+        el.style.marginLeft = `-${size/2}px`;
+        el.style.marginTop = `-${size/2}px`;
+      }
+    });
+  }
+}
+
+// Écouter les changements de zoom
+map.on('zoomend', updateMarkersStyle);
+
+
+
 
 // =======================
 // GEOLOC
@@ -95,7 +152,22 @@ map.on("locationfound", e => {
 });
 
 // =======================
-// RECENTER
+// LOGIQUE DU BOUTON RECENTER
+// =======================
+document.getElementById("recenterBtn").addEventListener("click", () => {
+  if (userLatLng) {
+    map.flyTo(userLatLng, 17, {
+      animate: true,
+      duration: 1.5
+    });
+  } else {
+    alert("Localisation en cours... assurez-vous d'avoir activé le GPS.");
+  }
+});
+
+
+// =======================
+// RECHERCHE DISTANCE
 // =======================
 
 /*const ORS_API_KEY = "5b3ce3597851110001cf6248578d54540441499fbbd75d50340a9c02";
