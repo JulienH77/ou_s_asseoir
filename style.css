@@ -163,14 +163,12 @@ button:active {
 .bench-marker {
   background-color: white;
   border-radius: 50%;
-  width: 24px;
-  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid; /* La couleur est injectée par le JS */
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  transition: transform 0.3s, width 0.3s, height 0.3s;
+  border: 1.5px solid; /* Bordure un peu plus fine */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: all 0.2s ease-out;
 }
 
 /* Légende discrète dans le panneau */
