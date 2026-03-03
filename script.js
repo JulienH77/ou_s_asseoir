@@ -168,94 +168,77 @@ document.getElementById("findBtn").onclick = async () => {
 };*/
 const ORS_API_KEY = "5b3ce3597851110001cf6248578d54540441499fbbd75d50340a9c02";
 
-document.getElementById("findBtn").onclick = async () => {
+findBtn.addEventListener("click", async () => {
 
   if (!userLatLng) return;
 
   document.getElementById("distance").innerText = "Recherche...";
+  findBtn.disabled = true;
 
-  // 1️⃣ On prend les 6 bancs les plus proches à vol d’oiseau
   const candidats = [...bancs]
     .sort((a,b) => map.distance(userLatLng, a) - map.distance(userLatLng, b))
-    .slice(0,6);
+    .slice(0,3); // ⚠️ 3 au lieu de 6
 
-  try {
+  let bestRoute = null;
+  let bestDistance = Infinity;
 
-    // 2️⃣ Requête MATRICE (1 seule requête)
-    const matrixResponse = await fetch(
-      "https://api.openrouteservice.org/v2/matrix/foot-walking",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": ORS_API_KEY,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          locations: [
-            [userLatLng.lng, userLatLng.lat],
-            ...candidats.map(b => [b.lng, b.lat])
-          ],
-          sources: [0],
-          destinations: candidats.map((_, i) => i+1)
-        })
+  for (let banc of candidats) {
+
+    try {
+
+      const response = await fetch(
+        "https://api.openrouteservice.org/v2/directions/foot-walking/geojson",
+        {
+          method: "POST",
+          headers: {
+            "Authorization": ORS_API_KEY,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            coordinates: [
+              [userLatLng.lng, userLatLng.lat],
+              [banc.lng, banc.lat]
+            ]
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!data.features) continue;
+
+      const route = data.features[0];
+      const distance = route.properties.summary.distance;
+
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestRoute = route;
       }
-    );
 
-    const matrixData = await matrixResponse.json();
-
-    if (!matrixData.distances) {
-      document.getElementById("distance").innerText = "Erreur ORS";
-      return;
+    } catch (e) {
+      console.log("ORS error", e);
     }
-
-    const distances = matrixData.distances[0];
-
-    // 3️⃣ On trouve le banc le plus proche
-    let minDistance = Math.min(...distances);
-    let minIndex = distances.indexOf(minDistance);
-    let bestBanc = candidats[minIndex];
-
-    // 4️⃣ Requête ROUTE (1 seule requête)
-    const routeResponse = await fetch(
-      "https://api.openrouteservice.org/v2/directions/foot-walking/geojson",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": ORS_API_KEY,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          coordinates: [
-            [userLatLng.lng, userLatLng.lat],
-            [bestBanc.lng, bestBanc.lat]
-          ]
-        })
-      }
-    );
-
-    const routeData = await routeResponse.json();
-
-    if (!routeData.features) {
-      document.getElementById("distance").innerText = "Route impossible";
-      return;
-    }
-
-    if (routeLayer) map.removeLayer(routeLayer);
-
-    routeLayer = L.geoJSON(routeData.features[0].geometry, {
-      style: { color: "#1a73e8", weight: 5 }
-    }).addTo(map);
-
-    map.fitBounds(routeLayer.getBounds(), { padding: [40,40] });
-
-    document.getElementById("distance").innerText =
-      Math.round(minDistance) + " m";
-
-  } catch (error) {
-    console.log(error);
-    document.getElementById("distance").innerText = "Erreur réseau";
   }
-};
+
+  if (!bestRoute) {
+    document.getElementById("distance").innerText = "Aucun accès";
+    findBtn.disabled = false;
+    return;
+  }
+
+  if (routeLayer) map.removeLayer(routeLayer);
+
+  routeLayer = L.geoJSON(bestRoute.geometry, {
+    style: { color: "#1a73e8", weight: 5 }
+  }).addTo(map);
+
+  map.fitBounds(routeLayer.getBounds(), { padding: [40,40] });
+
+  document.getElementById("distance").innerText =
+    Math.round(bestDistance) + " m";
+
+  findBtn.disabled = false;
+});
 
 // =======================
 // DRAW ROUTE
