@@ -20,12 +20,13 @@ let bancs = [];
 
 const benchIcon = L.divIcon({
   html: `
-  <svg width="16" height="16" viewBox="0 0 24 24">
-    <path d="M3 11h18v3H3zM6 7h12v3H6zM6 14h2v5H6zm10 0h2v5h-2z"
-          fill="#222"/>
-  </svg>`,
-  iconSize: [16,16],
-  iconAnchor: [8,8],
+  <div style="background: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border: 2px solid #1a73e8; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+    <svg width="12" height="12" viewBox="0 0 24 24">
+      <path d="M3 11h18v3H3zM6 7h12v3H6zM6 14h2v5H6zm10 0h2v5h-2z" fill="#1a73e8"/>
+    </svg>
+  </div>`,
+  iconSize: [20,20],
+  iconAnchor: [10,10],
   className: ""
 });
 
