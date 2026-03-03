@@ -41,6 +41,22 @@ function getBenchColor(type) {
   return TYPE_COLORS["autre"];
 }
 
+// Fonction pour générer l'icône avec la bonne couleur
+function createBenchIcon(color) {
+  return L.divIcon({
+    html: `
+    <div class="bench-marker" style="border-color: ${color};">
+      <svg width="14" height="14" viewBox="0 0 24 24">
+        <path d="M3 11h18v3H3zM6 7h12v3H6zM6 14h2v5H6zm10 0h2v5h-2z" fill="${color}"/>
+      </svg>
+    </div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -12],
+    className: ""
+  });
+}
+
 // =======================
 // MISE À JOUR DU CHARGEMENT
 // =======================
