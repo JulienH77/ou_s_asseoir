@@ -1,44 +1,45 @@
-const map = L.map('map', { zoomControl: false }).setView([48.112, 5.14], 15);
+const map = L.map('map', {
+  zoomControl: false
+}).setView([48.112, 5.14], 15);
 
-// FOND PREMIUM (remplace TA_CLE par la tienne)
 L.tileLayer(
-    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-  /*,
-    {attribution: '&copy; OpenStreetMap'
-    }*/
+  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  { maxZoom: 20 }
 ).addTo(map);
 
+L.control.zoom({ position: 'topright' }).addTo(map);
 
-// ============================
+
+// ========================
 // VARIABLES
-// ============================
+// ========================
 
 let userLatLng = null;
-let userMarker;
-let directionCone;
-let routeLayer;
+let userMarker = null;
+let accuracyCircle = null;
+let routeLayer = null;
 let bancs = [];
 
 
-// ============================
-// SVG BENCH PREMIUM
-// ============================
+// ========================
+// ICON SVG BANCS
+// ========================
 
 const benchIcon = L.divIcon({
   html: `
-  <svg width="20" height="20" viewBox="0 0 24 24">
+  <svg width="18" height="18" viewBox="0 0 24 24">
     <path d="M3 11h18v3H3zM6 7h12v3H6zM6 14h2v5H6zm10 0h2v5h-2z"
-          fill="#1a1a1a"/>
+          fill="#222"/>
   </svg>`,
-  iconSize: [20,20],
-  iconAnchor: [10,10],
+  iconSize: [18,18],
+  iconAnchor: [9,9],
   className: ""
 });
 
 
-// ============================
+// ========================
 // CHARGEMENT BANCS
-// ============================
+// ========================
 
 fetch("bancs.geojson")
 .then(res => res.json())
@@ -46,7 +47,10 @@ fetch("bancs.geojson")
 
   data.features.forEach(f => {
 
-    const latlng = [f.geometry.coordinates[1], f.geometry.coordinates[0]];
+    const latlng = [
+      f.geometry.coordinates[1],
+      f.geometry.coordinates[0]
+    ];
 
     const marker = L.marker(latlng, { icon: benchIcon })
       .bindPopup(f.properties.TYPE)
@@ -62,14 +66,13 @@ fetch("bancs.geojson")
 });
 
 
-// ============================
-// LOCALISATION GOOGLE STYLE
-// ============================
+// ========================
+// GEOLOCALISATION (SANS AUTO-ZOOM)
+// ========================
 
 map.locate({
   watch: true,
-  enableHighAccuracy: true,
-  setView: true
+  enableHighAccuracy: true
 });
 
 map.on("locationfound", e => {
@@ -77,6 +80,7 @@ map.on("locationfound", e => {
   userLatLng = e.latlng;
 
   if (!userMarker) {
+
     userMarker = L.circleMarker(e.latlng, {
       radius: 8,
       fillColor: "#1a73e8",
@@ -84,16 +88,40 @@ map.on("locationfound", e => {
       weight: 2,
       fillOpacity: 1
     }).addTo(map);
+
+    accuracyCircle = L.circle(e.latlng, {
+      radius: e.accuracy,
+      color: "#1a73e8",
+      fillColor: "#1a73e8",
+      fillOpacity: 0.1,
+      weight: 0
+    }).addTo(map);
+
   } else {
+
     userMarker.setLatLng(e.latlng);
+    accuracyCircle.setLatLng(e.latlng);
+    accuracyCircle.setRadius(e.accuracy);
+
   }
 
 });
 
 
-// ============================
-// CALCUL RÉSEAU OPTIMISÉ
-// ============================
+// ========================
+// BOUTON RECENTRAGE
+// ========================
+
+document.getElementById("recenterBtn").addEventListener("click", () => {
+  if (userLatLng) {
+    map.setView(userLatLng, 17);
+  }
+});
+
+
+// ========================
+// TROUVER PLUS PROCHE (RÉSEAU)
+// ========================
 
 document.getElementById("findBtn").addEventListener("click", async () => {
 
@@ -102,16 +130,15 @@ document.getElementById("findBtn").addEventListener("click", async () => {
   let best = null;
   let min = Infinity;
 
-  // On limite aux 6 plus proches à vol d’oiseau pour éviter 40 requêtes OSRM
-  const sorted = bancs
+  const candidats = bancs
     .filter(b => !b.type.toLowerCase().includes("bus"))
     .sort((a,b) =>
       map.distance(userLatLng, a.latlng) -
       map.distance(userLatLng, b.latlng)
     )
-    .slice(0,6);
+    .slice(0,5);
 
-  for (let b of sorted) {
+  for (let b of candidats) {
 
     const url = `https://router.project-osrm.org/route/v1/foot/${userLatLng.lng},${userLatLng.lat};${b.latlng.lng},${b.latlng.lat}?overview=false`;
 
@@ -133,9 +160,9 @@ document.getElementById("findBtn").addEventListener("click", async () => {
 });
 
 
-// ============================
-// TRACE FINAL
-// ============================
+// ========================
+// TRACE ITINERAIRE
+// ========================
 
 function drawRoute(dest, distance) {
 
@@ -153,7 +180,7 @@ function drawRoute(dest, distance) {
 
     map.fitBounds(routeLayer.getBounds(), { padding: [60,60] });
 
-    document.getElementById("distanceText").innerText =
+    document.getElementById("distance").innerText =
       Math.round(distance) + " m";
   });
 
