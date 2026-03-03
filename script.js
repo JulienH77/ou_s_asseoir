@@ -113,65 +113,52 @@ document.getElementById("findBtn").onclick = async () => {
 
   // 3 plus proches à vol d’oiseau
   const candidats = bancs
-    .sort((a,b) => map.distance(userLatLng, a) - map.distance(userLatLng, b))
+    .sort((a,b) =>
+      map.distance(userLatLng, a) -
+      map.distance(userLatLng, b)
+    )
     .slice(0,3);
 
-  let bestBanc = null;
-  let bestDistance = Infinity;
-  let bestSnap = null;
+  let best = null;
+  let min = Infinity;
 
   for (let banc of candidats) {
 
-    // Crée 8 points autour du banc
-    const radius = 15; // mètres
-    const angles = Array.from({length:8}, (_,i) => i * Math.PI/4);
-    const snapPoints = angles.map(a => {
-      const dx = radius * Math.cos(a);
-      const dy = radius * Math.sin(a);
-      // convert meter offset to lat/lng approximatif
-      const dLat = dy / 111320;
-      const dLng = dx / (40075000 * Math.cos(banc.lat * Math.PI/180) / 360);
-      return [banc.lat + dLat, banc.lng + dLng];
-    });
+    try {
 
-    let minLocalDist = Infinity;
-    let localSnap = null;
+      // 1️⃣ Snap banc au réseau piéton
+      const nearestUrl =
+        `https://router.project-osrm.org/nearest/v1/foot/${banc.lng},${banc.lat}`;
 
-    for (let pt of snapPoints) {
-      try {
-        const nearestUrl = `https://router.project-osrm.org/nearest/v1/foot/${pt[1]},${pt[0]}?number=1`;
-        const nearestRes = await fetch(nearestUrl);
-        const nearestData = await nearestRes.json();
-        if (!nearestData.waypoints) continue;
-        const snap = nearestData.waypoints[0].location;
+      const nearestRes = await fetch(nearestUrl);
+      const nearestData = await nearestRes.json();
 
-        const routeUrl = `https://router.project-osrm.org/route/v1/foot/${userLatLng.lng},${userLatLng.lat};${snap[0]},${snap[1]}?overview=false`;
-        const routeRes = await fetch(routeUrl);
-        const routeData = await routeRes.json();
-        if (!routeData.routes) continue;
+      if (!nearestData.waypoints) continue;
 
-        const dist = routeData.routes[0].distance;
-        if (dist < minLocalDist) {
-          minLocalDist = dist;
-          localSnap = snap;
-        }
+      const snap = nearestData.waypoints[0].location;
 
-      } catch(e) {
-        console.log("Erreur OSRM", e);
+      // 2️⃣ Route vers point snap
+      const routeUrl =
+        `https://router.project-osrm.org/route/v1/foot/${userLatLng.lng},${userLatLng.lat};${snap[0]},${snap[1]}?overview=false`;
+
+      const routeRes = await fetch(routeUrl);
+      const routeData = await routeRes.json();
+
+      if (!routeData.routes) continue;
+
+      const dist = routeData.routes[0].distance;
+
+      if (dist < min) {
+        min = dist;
+        best = banc;
       }
-    }
 
-    if (minLocalDist < bestDistance) {
-      bestDistance = minLocalDist;
-      bestBanc = banc;
-      bestSnap = localSnap;
+    } catch(e) {
+      console.log("Erreur banc", e);
     }
-
   }
 
-  if (bestBanc && bestSnap) {
-    drawRoute(bestSnap, bestDistance);
-  }
+  if (best) drawRoute(best, min);
 };
 
 // =======================
