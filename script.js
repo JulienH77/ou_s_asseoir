@@ -111,59 +111,58 @@ document.getElementById("findBtn").onclick = async () => {
 
   document.getElementById("distance").innerText = "Recherche...";
 
-  // 10 plus proches à vol d’oiseau
   const candidats = [...bancs]
     .sort((a,b) => map.distance(userLatLng, a) - map.distance(userLatLng, b))
-    .slice(0,10);
+    .slice(0,6); // 6 max pour rester rapide
 
-  // Construire la liste de coordonnées
-  const coords = [
-    `${userLatLng.lng},${userLatLng.lat}`,
-    ...candidats.map(b => `${b.lng},${b.lat}`)
-  ].join(";");
+  let bestRoute = null;
+  let bestDistance = Infinity;
 
-  try {
+  await Promise.all(candidats.map(async (banc) => {
 
-    const tableUrl =
-      `https://router.project-osrm.org/table/v1/foot/${coords}?sources=0`;
+    try {
 
-    const res = await fetch(tableUrl);
-    const data = await res.json();
+      const url =
+        `https://router.project-osrm.org/route/v1/foot/` +
+        `${userLatLng.lng},${userLatLng.lat};` +
+        `${banc.lng},${banc.lat}?overview=full&geometries=geojson`;
 
-    if (!data.distances) return;
+      const res = await fetch(url);
+      const data = await res.json();
 
-    // distances[0] = distances depuis l'utilisateur vers chaque banc
-const distances = data.distances[0];
+      if (!data.routes) return;
 
-let min = Infinity;
-let bestIndex = -1;
+      const route = data.routes[0];
 
-for (let i = 1; i < distances.length; i++) {
+      if (route.distance < bestDistance) {
+        bestDistance = route.distance;
+        bestRoute = route;
+      }
 
-  const d = distances[i];
+    } catch(e) {
+      console.log("route error", e);
+    }
 
-  // IGNORER null et valeurs invalides
-  if (typeof d !== "number" || !isFinite(d)) continue;
+  }));
 
-  if (d < min) {
-    min = d;
-    bestIndex = i - 1;
+  if (!bestRoute) {
+    document.getElementById("distance").innerText = "Aucun accès";
+    return;
   }
-}
-console.log(data);
-if (bestIndex === -1) {
-  document.getElementById("distance").innerText = "Aucun accès piéton";
-  return;
-}
 
-    const bestBanc = candidats[bestIndex];
+  if (routeLayer) map.removeLayer(routeLayer);
 
-    drawRoute(bestBanc, min);
+  routeLayer = L.geoJSON(bestRoute.geometry, {
+    style: { color: "#1a73e8", weight: 5 }
+  }).addTo(map);
 
-  } catch (e) {
-    console.log("Erreur table", e);
-  }
+  map.fitBounds(routeLayer.getBounds(), { padding: [40,40] });
+
+  document.getElementById("distance").innerText =
+    Math.round(bestDistance) + " m";
 };
+
+
 // =======================
 // DRAW ROUTE
 // =======================
