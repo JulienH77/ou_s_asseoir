@@ -97,7 +97,7 @@ map.on("locationfound", e => {
 // RECENTER
 // =======================
 
-const ORS_API_KEY = "5b3ce3597851110001cf6248578d54540441499fbbd75d50340a9c02";
+/*const ORS_API_KEY = "5b3ce3597851110001cf6248578d54540441499fbbd75d50340a9c02";
 
 document.getElementById("findBtn").onclick = async () => {
 
@@ -165,8 +165,97 @@ document.getElementById("findBtn").onclick = async () => {
 
   document.getElementById("distance").innerText =
     Math.round(bestDistance) + " m";
-};
+};*/
+const ORS_API_KEY = "5b3ce3597851110001cf6248578d54540441499fbbd75d50340a9c02";
 
+document.getElementById("findBtn").onclick = async () => {
+
+  if (!userLatLng) return;
+
+  document.getElementById("distance").innerText = "Recherche...";
+
+  // 1️⃣ On prend les 6 bancs les plus proches à vol d’oiseau
+  const candidats = [...bancs]
+    .sort((a,b) => map.distance(userLatLng, a) - map.distance(userLatLng, b))
+    .slice(0,6);
+
+  try {
+
+    // 2️⃣ Requête MATRICE (1 seule requête)
+    const matrixResponse = await fetch(
+      "https://api.openrouteservice.org/v2/matrix/foot-walking",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": ORS_API_KEY,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          locations: [
+            [userLatLng.lng, userLatLng.lat],
+            ...candidats.map(b => [b.lng, b.lat])
+          ],
+          sources: [0],
+          destinations: candidats.map((_, i) => i+1)
+        })
+      }
+    );
+
+    const matrixData = await matrixResponse.json();
+
+    if (!matrixData.distances) {
+      document.getElementById("distance").innerText = "Erreur ORS";
+      return;
+    }
+
+    const distances = matrixData.distances[0];
+
+    // 3️⃣ On trouve le banc le plus proche
+    let minDistance = Math.min(...distances);
+    let minIndex = distances.indexOf(minDistance);
+    let bestBanc = candidats[minIndex];
+
+    // 4️⃣ Requête ROUTE (1 seule requête)
+    const routeResponse = await fetch(
+      "https://api.openrouteservice.org/v2/directions/foot-walking/geojson",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": ORS_API_KEY,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          coordinates: [
+            [userLatLng.lng, userLatLng.lat],
+            [bestBanc.lng, bestBanc.lat]
+          ]
+        })
+      }
+    );
+
+    const routeData = await routeResponse.json();
+
+    if (!routeData.features) {
+      document.getElementById("distance").innerText = "Route impossible";
+      return;
+    }
+
+    if (routeLayer) map.removeLayer(routeLayer);
+
+    routeLayer = L.geoJSON(routeData.features[0].geometry, {
+      style: { color: "#1a73e8", weight: 5 }
+    }).addTo(map);
+
+    map.fitBounds(routeLayer.getBounds(), { padding: [40,40] });
+
+    document.getElementById("distance").innerText =
+      Math.round(minDistance) + " m";
+
+  } catch (error) {
+    console.log(error);
+    document.getElementById("distance").innerText = "Erreur réseau";
+  }
+};
 
 // =======================
 // DRAW ROUTE
