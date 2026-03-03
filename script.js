@@ -1,24 +1,21 @@
 // =============================
-// INITIALISATION
+// INITIALISATION CARTE
 // =============================
 
 const map = L.map('map', {
     zoomControl: false
-}).setView([48.112, 5.14], 14);
+}).setView([48.112, 5.14], 15);
 
-L.control.zoom({
-    position: 'topright'
-}).addTo(map);
+L.control.zoom({ position: 'topright' }).addTo(map);
 
 
 // =============================
-// FONDS DE CARTE
+// FONDS
 // =============================
 
 const osm = L.tileLayer(
-    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    { attribution: '&copy; OpenStreetMap' }
-);
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+).addTo(map);
 
 const googleStreet = L.tileLayer(
     'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
@@ -30,130 +27,211 @@ const googleSat = L.tileLayer(
     { maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'] }
 );
 
-osm.addTo(map);
-
 L.control.layers({
     "OSM": osm,
     "Google Plan": googleStreet,
     "Google Satellite": googleSat
-}, null, {
-    position: 'topright'
-}).addTo(map);
+}, null, { position: "topright" }).addTo(map);
 
 
 // =============================
 // VARIABLES
 // =============================
 
-let bancsLayer;
-let userLatLng = null;
+let bancs = [];
 let routeLayer;
-let locationCircle;
+let userMarker;
+let directionCone;
+let userLatLng = null;
 
 
 // =============================
-// CHARGEMENT DES BANCS
+// SVG ICON BANCS
+// =============================
+
+const benchIcon = L.divIcon({
+    className: "",
+    html: `
+    <svg width="18" height="18" viewBox="0 0 24 24">
+      <rect x="3" y="10" width="18" height="4" rx="1" fill="#111"/>
+      <rect x="6" y="6" width="12" height="3" rx="1" fill="#111"/>
+      <rect x="6" y="14" width="2" height="6" fill="#111"/>
+      <rect x="16" y="14" width="2" height="6" fill="#111"/>
+    </svg>
+    `,
+    iconSize: [18,18],
+    iconAnchor: [9,9]
+});
+
+
+// =============================
+// CHARGEMENT BANCS
 // =============================
 
 fetch("bancs.geojson")
 .then(res => res.json())
 .then(data => {
 
-    bancsLayer = L.geoJSON(data, {
+    data.features.forEach(feature => {
 
-        pointToLayer: function(feature, latlng) {
-            return L.circleMarker(latlng, {
-                radius: 5,
-                color: "#333",
-                weight: 1,
-                fillColor: "#555",
-                fillOpacity: 0.9
-            }).bindPopup(feature.properties.TYPE);
-        }
+        const coords = feature.geometry.coordinates;
+        const latlng = [coords[1], coords[0]];
 
-    }).addTo(map);
+        const marker = L.marker(latlng, { icon: benchIcon })
+            .bindPopup(feature.properties.TYPE)
+            .addTo(map);
+
+        bancs.push({
+            latlng: L.latLng(latlng),
+            marker: marker,
+            type: feature.properties.TYPE
+        });
+
+    });
 
 });
 
 
 // =============================
-// GEOLOCALISATION CONTINUE
+// LOCALISATION GOOGLE STYLE
 // =============================
 
 map.locate({
-    setView: true,
     watch: true,
-    enableHighAccuracy: true
+    enableHighAccuracy: true,
+    setView: true
 });
 
 map.on("locationfound", function(e) {
 
     userLatLng = e.latlng;
 
-    if (!locationCircle) {
-        locationCircle = L.circleMarker(e.latlng, {
+    if (!userMarker) {
+
+        userMarker = L.circleMarker(e.latlng, {
             radius: 8,
-            color: "#007AFF",
-            fillColor: "#007AFF",
-            fillOpacity: 0.4,
-            weight: 2
+            color: "#fff",
+            weight: 2,
+            fillColor: "#1a73e8",
+            fillOpacity: 1
         }).addTo(map);
+
+        L.circle(e.latlng, {
+            radius: e.accuracy,
+            color: "#1a73e8",
+            fillColor: "#1a73e8",
+            fillOpacity: 0.15,
+            weight: 0
+        }).addTo(map);
+
     } else {
-        locationCircle.setLatLng(e.latlng);
+        userMarker.setLatLng(e.latlng);
     }
 
 });
 
 
 // =============================
-// BOUTON TROUVER BANC
+// DIRECTION (BOUSSOLE)
 // =============================
 
-document.getElementById("locateBtn").addEventListener("click", () => {
+if (window.DeviceOrientationEvent) {
+    window.addEventListener("deviceorientationabsolute", function(event) {
 
-    if (!userLatLng || !bancsLayer) return;
+        if (!userMarker || event.alpha === null) return;
 
-    findNearestBench(userLatLng);
+        const heading = event.alpha;
 
-});
+        if (directionCone) map.removeLayer(directionCone);
 
-
-// =============================
-// TROUVER BANC LE PLUS PROCHE
-// =============================
-
-function findNearestBench(userLatLng) {
-
-    let minDist = Infinity;
-    let nearest = null;
-
-    bancsLayer.eachLayer(layer => {
-
-        const type = layer.feature.properties.TYPE.toLowerCase();
-
-        if (type.includes("bus")) return;
-
-        const dist = map.distance(userLatLng, layer.getLatLng());
-
-        if (dist < minDist) {
-            minDist = dist;
-            nearest = layer.getLatLng();
-        }
+        directionCone = L.polygon(getCone(userLatLng, heading), {
+            color: "#1a73e8",
+            fillColor: "#1a73e8",
+            fillOpacity: 0.3,
+            weight: 0
+        }).addTo(map);
 
     });
+}
 
-    if (nearest) {
-        drawRoute(userLatLng, nearest);
-    }
+function getCone(latlng, heading) {
 
+    const length = 0.0005;
+    const angle = 20;
+
+    const left = heading - angle;
+    const right = heading + angle;
+
+    const p1 = latlng;
+    const p2 = destinationPoint(latlng, left, length);
+    const p3 = destinationPoint(latlng, right, length);
+
+    return [p1, p2, p3];
+}
+
+function destinationPoint(latlng, bearing, distance) {
+
+    const R = 6378137;
+    const δ = distance;
+    const θ = bearing * Math.PI/180;
+
+    const φ1 = latlng.lat * Math.PI/180;
+    const λ1 = latlng.lng * Math.PI/180;
+
+    const φ2 = Math.asin(
+        Math.sin(φ1)*Math.cos(δ) +
+        Math.cos(φ1)*Math.sin(δ)*Math.cos(θ)
+    );
+
+    const λ2 = λ1 + Math.atan2(
+        Math.sin(θ)*Math.sin(δ)*Math.cos(φ1),
+        Math.cos(δ)-Math.sin(φ1)*Math.sin(φ2)
+    );
+
+    return L.latLng(φ2*180/Math.PI, λ2*180/Math.PI);
 }
 
 
 // =============================
-// ROUTAGE OSRM
+// VRAI PLUS PROCHE (DISTANCE RÉSEAU)
 // =============================
 
-function drawRoute(start, end) {
+document.getElementById("locateBtn").addEventListener("click", async () => {
+
+    if (!userLatLng) return;
+
+    let shortestDistance = Infinity;
+    let bestRoute = null;
+
+    for (let banc of bancs) {
+
+        if (banc.type.toLowerCase().includes("bus")) continue;
+
+        const url = `https://router.project-osrm.org/route/v1/foot/${userLatLng.lng},${userLatLng.lat};${banc.latlng.lng},${banc.latlng.lat}?overview=false`;
+
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (!data.routes || data.routes.length === 0) continue;
+
+        const dist = data.routes[0].distance;
+
+        if (dist < shortestDistance) {
+            shortestDistance = dist;
+            bestRoute = banc.latlng;
+        }
+    }
+
+    if (bestRoute) {
+        drawFinalRoute(userLatLng, bestRoute, shortestDistance);
+    }
+
+});
+
+
+function drawFinalRoute(start, end, distance) {
+
+    if (routeLayer) map.removeLayer(routeLayer);
 
     const url = `https://router.project-osrm.org/route/v1/foot/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`;
 
@@ -161,43 +239,21 @@ function drawRoute(start, end) {
     .then(res => res.json())
     .then(data => {
 
-        if (!data.routes || data.routes.length === 0) return;
-
-        if (routeLayer) map.removeLayer(routeLayer);
-
         const route = data.routes[0].geometry;
-        const distance = Math.round(data.routes[0].distance);
 
         routeLayer = L.geoJSON(route, {
             style: {
-                color: "#007AFF",
-                weight: 4
+                color: "#1a73e8",
+                weight: 5
             }
         }).addTo(map);
 
-        map.fitBounds(routeLayer.getBounds(), { padding: [40, 40] });
+        map.fitBounds(routeLayer.getBounds(), { padding: [50,50] });
 
-        displayDistance(distance);
+        document.getElementById("distanceBox").innerHTML =
+            `<span class="walker">🚶</span> ${Math.round(distance)} m`;
+
+        document.getElementById("distanceBox").classList.add("visible");
 
     });
-
-}
-
-
-// =============================
-// AFFICHAGE DISTANCE UI
-// =============================
-
-function displayDistance(distance) {
-
-    const distanceBox = document.getElementById("distanceBox");
-    distanceBox.innerHTML = `
-        <div class="distance-content">
-            <span class="icon">🚶</span>
-            <span class="distance">${distance} m</span>
-        </div>
-    `;
-
-    distanceBox.classList.add("visible");
-
 }
