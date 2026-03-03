@@ -78,7 +78,7 @@ fetch("bancs.geojson")
     
     const marker = L.marker(latlng, { 
       icon: createBenchIcon(color) 
-    }).bindPopup(`<strong>Type :</strong> ${typeRaw}`);
+    }).bindPopup(`${typeRaw}`);
     
     marker.addTo(benchesLayer);
     bancs.push(L.latLng(latlng));
@@ -262,7 +262,7 @@ findBtn.addEventListener("click", async () => {
 
   const candidats = [...bancs]
     .sort((a,b) => map.distance(userLatLng, a) - map.distance(userLatLng, b))
-    .slice(0,3); // ⚠️ 3 au lieu de 6
+    .slice(0,3); // 3 au lieu de 6
 
   let bestRoute = null;
   let bestDistance = Infinity;
