@@ -1,6 +1,5 @@
-const map = L.map('map', {
-  zoomControl: false
-}).setView([48.112, 5.14], 15);
+const map = L.map('map', { zoomControl: false })
+  .setView([48.112, 5.14], 15);
 
 L.tileLayer(
   'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -9,36 +8,29 @@ L.tileLayer(
 
 L.control.zoom({ position: 'topright' }).addTo(map);
 
-
-// =======================
-// VARIABLES
-// =======================
-
 let userLatLng = null;
 let userMarker = null;
 let accuracyCircle = null;
 let routeLayer = null;
 let bancs = [];
 
-
 // =======================
-// ICON SVG BENCH
+// SVG BENCH PROPRE
 // =======================
 
 const benchIcon = L.divIcon({
   html: `
-  <svg width="18" height="18" viewBox="0 0 24 24">
+  <svg width="16" height="16" viewBox="0 0 24 24">
     <path d="M3 11h18v3H3zM6 7h12v3H6zM6 14h2v5H6zm10 0h2v5h-2z"
           fill="#222"/>
   </svg>`,
-  iconSize: [18,18],
-  iconAnchor: [9,9],
+  iconSize: [16,16],
+  iconAnchor: [8,8],
   className: ""
 });
 
-
 // =======================
-// CHARGEMENT BANCS
+// LOAD BANCS
 // =======================
 
 fetch("bancs.geojson")
@@ -58,17 +50,13 @@ fetch("bancs.geojson")
       .bindPopup(f.properties.TYPE)
       .addTo(map);
 
-    bancs.push({
-      latlng: L.latLng(latlng)
-    });
-
+    bancs.push(L.latLng(latlng));
   });
 
 });
 
-
 // =======================
-// GEOLOCALISATION
+// GEOLOC
 // =======================
 
 map.locate({
@@ -83,7 +71,7 @@ map.on("locationfound", e => {
   if (!userMarker) {
 
     userMarker = L.circleMarker(e.latlng, {
-      radius: 8,
+      radius: 7,
       fillColor: "#1a73e8",
       color: "#fff",
       weight: 2,
@@ -92,78 +80,70 @@ map.on("locationfound", e => {
 
     accuracyCircle = L.circle(e.latlng, {
       radius: e.accuracy,
-      color: "#1a73e8",
       fillColor: "#1a73e8",
       fillOpacity: 0.1,
       weight: 0
     }).addTo(map);
 
   } else {
-
     userMarker.setLatLng(e.latlng);
     accuracyCircle.setLatLng(e.latlng);
     accuracyCircle.setRadius(e.accuracy);
-
   }
 
 });
 
-
 // =======================
-// RECENTRAGE
-// =======================
-
-document.getElementById("recenterBtn").addEventListener("click", () => {
-  if (userLatLng) {
-    map.setView(userLatLng, 17);
-  }
-});
-
-
-// =======================
-// TROUVER PLUS PROCHE RAPIDE
+// RECENTER
 // =======================
 
-document.getElementById("findBtn").addEventListener("click", async () => {
+document.getElementById("recenterBtn").onclick = () => {
+  if (userLatLng) map.setView(userLatLng, 17);
+};
 
-  if (!userLatLng || bancs.length === 0) return;
+// =======================
+// FIND NEAREST (RAPIDE)
+// =======================
+
+document.getElementById("findBtn").onclick = async () => {
+
+  if (!userLatLng) return;
 
   document.getElementById("distance").innerText = "Recherche...";
 
-  // Construction URL table OSRM
-  const coords = [
-    `${userLatLng.lng},${userLatLng.lat}`,
-    ...bancs.map(b => `${b.latlng.lng},${b.latlng.lat}`)
-  ].join(";");
+  // on prend les 3 plus proches à vol d’oiseau
+  const candidats = bancs
+    .sort((a,b) =>
+      map.distance(userLatLng, a) -
+      map.distance(userLatLng, b)
+    )
+    .slice(0,3);
 
-  const url = `https://router.project-osrm.org/table/v1/foot/${coords}?sources=0`;
-
-  const res = await fetch(url);
-  const data = await res.json();
-
-  if (!data.distances) return;
-
-  const distances = data.distances[0].slice(1);
-
+  let best = null;
   let min = Infinity;
-  let index = -1;
 
-  distances.forEach((d, i) => {
-    if (d !== null && d < min) {
+  for (let b of candidats) {
+
+    const url = `https://router.project-osrm.org/route/v1/foot/${userLatLng.lng},${userLatLng.lat};${b.lng},${b.lat}?overview=false`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (!data.routes) continue;
+
+    const d = data.routes[0].distance;
+
+    if (d < min) {
       min = d;
-      index = i;
+      best = b;
     }
-  });
-
-  if (index >= 0) {
-    drawRoute(bancs[index].latlng, min);
   }
 
-});
-
+  if (best) drawRoute(best, min);
+};
 
 // =======================
-// TRACE ROUTE
+// DRAW ROUTE
 // =======================
 
 function drawRoute(dest, distance) {
@@ -180,10 +160,9 @@ function drawRoute(dest, distance) {
       style: { color: "#1a73e8", weight: 5 }
     }).addTo(map);
 
-    map.fitBounds(routeLayer.getBounds(), { padding: [60,60] });
+    map.fitBounds(routeLayer.getBounds(), { padding: [50,50] });
 
     document.getElementById("distance").innerText =
       Math.round(distance) + " m";
   });
-
 }
