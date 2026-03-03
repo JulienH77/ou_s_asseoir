@@ -61,7 +61,7 @@ function createBenchIcon(color) {
 // MISE À JOUR DU CHARGEMENT
 // =======================
 // Groupe pour gérer tous les marqueurs de bancs ensemble
-/*const benchesLayer = L.layerGroup().addTo(map);*/
+const benchesLayer = L.layerGroup().addTo(map);
 
 fetch("bancs.geojson")
 .then(res => res.json())
@@ -84,17 +84,6 @@ fetch("bancs.geojson")
     bancs.push(L.latLng(latlng));
   });
 });
-
-
-
-
-
-
-
-
-
-
-
 
 
 
