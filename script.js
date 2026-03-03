@@ -15,46 +15,45 @@ let routeLayer = null;
 let bancs = [];
 
 // =======================
-// SVG BENCH PROPRE
+// CONFIGURATION DES TYPES
 // =======================
+const TYPE_COLORS = {
+  "banc": "#1a73e8",      // Bleu (Classique)
+  "assise": "#1aa2e8",    // Cyan
+  "banquette": "#7b1fa2", // Violet
+  "fauteuil": "#e65100",  // Orange
+  "default": "#5f6368"    // Gris
+};
 
-const benchIcon = L.divIcon({
-  html: `
-  <div style="background: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border: 2px solid #1a73e8; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
-    <svg width="12" height="12" viewBox="0 0 24 24">
-      <path d="M3 11h18v3H3zM6 7h12v3H6zM6 14h2v5H6zm10 0h2v5h-2z" fill="#1a73e8"/>
-    </svg>
-  </div>`,
-  iconSize: [20,20],
-  iconAnchor: [10,10],
-  className: ""
-});
+function getBenchColor(type) {
+  const t = type.toLowerCase();
+  if (t.includes("banc") && !t.includes("banquette")) return TYPE_COLORS["banc"];
+  if (t.includes("assise")) return TYPE_COLORS["assise"];
+  if (t.includes("banquette")) return TYPE_COLORS["banquette"];
+  if (t.includes("fauteuil")) return TYPE_COLORS["fauteuil"];
+  return TYPE_COLORS["default"];
+}
+
+// Fonction pour générer l'icône avec la bonne couleur
+function createBenchIcon(color) {
+  return L.divIcon({
+    html: `
+    <div class="bench-marker" style="border-color: ${color};">
+      <svg width="14" height="14" viewBox="0 0 24 24">
+        <path d="M3 11h18v3H3zM6 7h12v3H6zM6 14h2v5H6zm10 0h2v5h-2z" fill="${color}"/>
+      </svg>
+    </div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -12],
+    className: ""
+  });
+}
 
 // =======================
 // LOAD BANCS
 // =======================
 
-/*fetch("bancs.geojson")
-.then(res => res.json())
-.then(data => {
-
-  data.features.forEach(f => {
-
-    if (f.properties.TYPE.toLowerCase().includes("bus")) return;
-
-    const latlng = [
-      f.geometry.coordinates[1],
-      f.geometry.coordinates[0]
-    ];
-
-    L.marker(latlng, { icon: benchIcon })
-      .bindPopup(f.properties.TYPE)
-      .addTo(map);
-
-    bancs.push(L.latLng(latlng));
-  });
-
-});*/
 // Groupe pour gérer tous les marqueurs de bancs ensemble
 const benchesLayer = L.layerGroup().addTo(map);
 
@@ -65,16 +64,15 @@ fetch("bancs.geojson")
     if (f.properties.TYPE.toLowerCase().includes("bus")) return;
 
     const latlng = [f.geometry.coordinates[1], f.geometry.coordinates[0]];
+    const color = getBenchColor(f.properties.TYPE);
     
-    // Création du marqueur
-    const marker = L.marker(latlng, { icon: benchIcon }).bindPopup(f.properties.TYPE);
+    const marker = L.marker(latlng, { 
+      icon: createBenchIcon(color) 
+    }).bindPopup(`<strong>${f.properties.TYPE}</strong>`);
     
     marker.addTo(benchesLayer);
     bancs.push(L.latLng(latlng));
   });
-  
-  // Appliquer le style initial
-  updateMarkersStyle();
 });
 
 // Fonction pour ajuster la visibilité et la taille
