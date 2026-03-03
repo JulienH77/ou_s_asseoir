@@ -46,13 +46,13 @@ function createBenchIcon(color) {
   return L.divIcon({
     html: `
     <div class="bench-marker" style="border-color: ${color};">
-      <svg width="14" height="14" viewBox="0 0 24 24">
+      <svg viewBox="0 0 24 24">
         <path d="M3 11h18v3H3zM6 7h12v3H6zM6 14h2v5H6zm10 0h2v5h-2z" fill="${color}"/>
       </svg>
     </div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-    popupAnchor: [0, -12],
+    iconSize: [20, 20], // Taille par défaut pour l'ancrage
+    iconAnchor: [10, 10],
+    popupAnchor: [0, -10],
     className: ""
   });
 }
@@ -106,29 +106,21 @@ function updateMarkersStyle() {
   } else {
     if (!map.hasLayer(benchesLayer)) map.addLayer(benchesLayer);
     
-    // Calcul de l'échelle de base (réduite par rapport à votre version précédente)
-    // Ici 18px à zoom 18, environ 8px à zoom 14
-    const baseScale = Math.max(0.3, (currentZoom - 13) / 6);
-    const standardSize = 20 * baseScale; // Réduction de la taille de base de 24 à 20
+    // Taille de base un peu plus grande pour qu'ils soient lisibles (16px à 22px)
+    const baseSize = Math.max(12, (currentZoom - 13) * 4); 
 
     benchesLayer.eachLayer(marker => {
       const el = marker.getElement();
       if (el) {
-        // Appliquer un ratio de 0.75 (25% plus petit) pour Pierre/Autre
         const isSmallType = (marker.typeBench === "autre" || marker.typeBench === "pierre");
-        const finalSize = isSmallType ? (standardSize * 0.75) : standardSize;
+        const finalSize = isSmallType ? (baseSize * 0.8) : baseSize;
 
-        el.style.width = `${finalSize}px`;
-        el.style.height = `${finalSize}px`;
-        el.style.marginLeft = `-${finalSize/2}px`;
-        el.style.marginTop = `-${finalSize/2}px`;
+        // On injecte la taille dans la variable CSS
+        el.style.setProperty('--m-size', `${finalSize}px`);
         
-        // On s'assure que l'icône SVG à l'intérieur suit
-        const svg = el.querySelector('svg');
-        if (svg) {
-          svg.setAttribute('width', finalSize * 0.6);
-          svg.setAttribute('height', finalSize * 0.6);
-        }
+        // Leaflet a besoin de recalculer la position centrale
+        el.style.marginLeft = `-${finalSize / 2}px`;
+        el.style.marginTop = `-${finalSize / 2}px`;
       }
     });
   }
