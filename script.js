@@ -1,59 +1,54 @@
 // =============================
-// INITIALISATION CARTE
+// INITIALISATION
 // =============================
 
-const map = L.map('map').setView([48.112, 5.14], 14);
+const map = L.map('map', {
+    zoomControl: false
+}).setView([48.112, 5.14], 14);
+
+L.control.zoom({
+    position: 'topright'
+}).addTo(map);
+
 
 // =============================
 // FONDS DE CARTE
 // =============================
 
-// OSM
 const osm = L.tileLayer(
     'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    {
-        attribution: '&copy; OpenStreetMap'
-    }
+    { attribution: '&copy; OpenStreetMap' }
 );
 
-// Google Street (plan)
 const googleStreet = L.tileLayer(
     'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-    {
-        maxZoom: 20,
-        subdomains:['mt0','mt1','mt2','mt3']
-    }
+    { maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'] }
 );
 
-// Google Satellite
 const googleSat = L.tileLayer(
     'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-    {
-        maxZoom: 20,
-        subdomains:['mt0','mt1','mt2','mt3']
-    }
+    { maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'] }
 );
 
-// Ajouter OSM par défaut
 osm.addTo(map);
 
-// Contrôle couches
-const baseMaps = {
+L.control.layers({
     "OSM": osm,
     "Google Plan": googleStreet,
     "Google Satellite": googleSat
-};
-
-L.control.layers(baseMaps).addTo(map);
+}, null, {
+    position: 'topright'
+}).addTo(map);
 
 
 // =============================
-// VARIABLES GLOBALES
+// VARIABLES
 // =============================
 
 let bancsLayer;
-let userMarker;
+let userLatLng = null;
 let routeLayer;
+let locationCircle;
 
 
 // =============================
@@ -61,142 +56,148 @@ let routeLayer;
 // =============================
 
 fetch("bancs.geojson")
-.then(response => response.json())
+.then(res => res.json())
 .then(data => {
 
     bancsLayer = L.geoJSON(data, {
 
-        pointToLayer: function (feature, latlng) {
-
-            return L.marker(latlng).bindPopup(
-                "Type : " + feature.properties.TYPE
-            );
+        pointToLayer: function(feature, latlng) {
+            return L.circleMarker(latlng, {
+                radius: 5,
+                color: "#333",
+                weight: 1,
+                fillColor: "#555",
+                fillOpacity: 0.9
+            }).bindPopup(feature.properties.TYPE);
         }
 
     }).addTo(map);
 
-})
-.catch(error => {
-    console.error("Erreur chargement bancs :", error);
 });
 
 
 // =============================
-// BOUTON LOCALISATION
+// GEOLOCALISATION CONTINUE
+// =============================
+
+map.locate({
+    setView: true,
+    watch: true,
+    enableHighAccuracy: true
+});
+
+map.on("locationfound", function(e) {
+
+    userLatLng = e.latlng;
+
+    if (!locationCircle) {
+        locationCircle = L.circleMarker(e.latlng, {
+            radius: 8,
+            color: "#007AFF",
+            fillColor: "#007AFF",
+            fillOpacity: 0.4,
+            weight: 2
+        }).addTo(map);
+    } else {
+        locationCircle.setLatLng(e.latlng);
+    }
+
+});
+
+
+// =============================
+// BOUTON TROUVER BANC
 // =============================
 
 document.getElementById("locateBtn").addEventListener("click", () => {
 
-    if (!navigator.geolocation) {
-        alert("Géolocalisation non supportée");
-        return;
-    }
+    if (!userLatLng || !bancsLayer) return;
 
-    navigator.geolocation.getCurrentPosition(position => {
-
-        const userLat = position.coords.latitude;
-        const userLng = position.coords.longitude;
-
-        if (userMarker) map.removeLayer(userMarker);
-
-        userMarker = L.marker([userLat, userLng])
-            .addTo(map)
-            .bindPopup("Vous êtes ici")
-            .openPopup();
-
-        map.setView([userLat, userLng], 16);
-
-        findNearestBench(userLat, userLng);
-
-    }, () => {
-        alert("Impossible de récupérer votre position");
-    });
+    findNearestBench(userLatLng);
 
 });
 
 
 // =============================
-// TROUVER LE BANC LE PLUS PROCHE
+// TROUVER BANC LE PLUS PROCHE
 // =============================
 
-function findNearestBench(userLat, userLng) {
+function findNearestBench(userLatLng) {
 
     let minDist = Infinity;
-    let nearestLayer = null;
+    let nearest = null;
 
     bancsLayer.eachLayer(layer => {
 
         const type = layer.feature.properties.TYPE.toLowerCase();
 
-        // On exclut les arrêts de bus
         if (type.includes("bus")) return;
 
-        const benchLatLng = layer.getLatLng();
-        const dist = map.distance([userLat, userLng], benchLatLng);
+        const dist = map.distance(userLatLng, layer.getLatLng());
 
         if (dist < minDist) {
             minDist = dist;
-            nearestLayer = layer;
+            nearest = layer.getLatLng();
         }
 
     });
 
-    if (nearestLayer) {
-
-        const nearestLatLng = nearestLayer.getLatLng();
-
-        nearestLayer.openPopup();
-
-        drawRoute(
-            userLat,
-            userLng,
-            nearestLatLng.lat,
-            nearestLatLng.lng,
-            Math.round(minDist)
-        );
+    if (nearest) {
+        drawRoute(userLatLng, nearest);
     }
+
 }
 
 
 // =============================
-// CALCUL ET TRACE ITINERAIRE
+// ROUTAGE OSRM
 // =============================
 
-function drawRoute(lat1, lng1, lat2, lng2, distanceEuclidienne) {
+function drawRoute(start, end) {
 
-    const url = `https://router.project-osrm.org/route/v1/foot/${lng1},${lat1};${lng2},${lat2}?overview=full&geometries=geojson`;
+    const url = `https://router.project-osrm.org/route/v1/foot/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`;
 
     fetch(url)
-    .then(response => response.json())
+    .then(res => res.json())
     .then(data => {
 
-        if (!data.routes || data.routes.length === 0) {
-            alert("Pas d'itinéraire trouvé");
-            return;
-        }
+        if (!data.routes || data.routes.length === 0) return;
 
         if (routeLayer) map.removeLayer(routeLayer);
 
         const route = data.routes[0].geometry;
-        const routeDistance = Math.round(data.routes[0].distance);
+        const distance = Math.round(data.routes[0].distance);
 
         routeLayer = L.geoJSON(route, {
             style: {
-                color: "blue",
-                weight: 5
+                color: "#007AFF",
+                weight: 4
             }
         }).addTo(map);
 
-        map.fitBounds(routeLayer.getBounds());
+        map.fitBounds(routeLayer.getBounds(), { padding: [40, 40] });
 
-        alert(
-            "Distance à vol d’oiseau : " + distanceEuclidienne + " m\n" +
-            "Distance réelle à pied : " + routeDistance + " m"
-        );
+        displayDistance(distance);
 
-    })
-    .catch(error => {
-        console.error("Erreur OSRM :", error);
     });
+
+}
+
+
+// =============================
+// AFFICHAGE DISTANCE UI
+// =============================
+
+function displayDistance(distance) {
+
+    const distanceBox = document.getElementById("distanceBox");
+    distanceBox.innerHTML = `
+        <div class="distance-content">
+            <span class="icon">🚶</span>
+            <span class="distance">${distance} m</span>
+        </div>
+    `;
+
+    distanceBox.classList.add("visible");
 
 }
