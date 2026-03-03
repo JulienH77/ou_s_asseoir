@@ -133,19 +133,28 @@ document.getElementById("findBtn").onclick = async () => {
     if (!data.distances) return;
 
     // distances[0] = distances depuis l'utilisateur vers chaque banc
-    const distances = data.distances[0];
+const distances = data.distances[0];
 
-    let min = Infinity;
-    let bestIndex = -1;
+let min = Infinity;
+let bestIndex = -1;
 
-    for (let i = 1; i < distances.length; i++) {
-      if (distances[i] < min) {
-        min = distances[i];
-        bestIndex = i - 1;
-      }
-    }
+for (let i = 1; i < distances.length; i++) {
 
-    if (bestIndex === -1) return;
+  const d = distances[i];
+
+  // IGNORER null et valeurs invalides
+  if (typeof d !== "number" || !isFinite(d)) continue;
+
+  if (d < min) {
+    min = d;
+    bestIndex = i - 1;
+  }
+}
+console.log(data);
+if (bestIndex === -1) {
+  document.getElementById("distance").innerText = "Aucun accès piéton";
+  return;
+}
 
     const bestBanc = candidats[bestIndex];
 
