@@ -6,7 +6,7 @@ L.tileLayer(
   /*,
     {attribution: '&copy; OpenStreetMap'
     }*/
-);.addTo(map);
+).addTo(map);
 
 
 // ============================
