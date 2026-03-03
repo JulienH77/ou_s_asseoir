@@ -152,3 +152,8 @@ button:active {
   height: 22px;
   fill: var(--text-secondary);
 }
+
+/* Animation douce pour le changement de taille des marqueurs */
+.leaflet-marker-icon {
+  transition: width 0.3s, height 0.3s, margin 0.3s;
+}
