@@ -2,9 +2,11 @@ const map = L.map('map', { zoomControl: false }).setView([48.112, 5.14], 15);
 
 // FOND PREMIUM (remplace TA_CLE par la tienne)
 L.tileLayer(
-  'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png',
-  { maxZoom: 20 }
-).addTo(map);
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+  /*,
+    {attribution: '&copy; OpenStreetMap'
+    }*/
+);.addTo(map);
 
 
 // ============================
