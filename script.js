@@ -111,57 +111,50 @@ document.getElementById("findBtn").onclick = async () => {
 
   document.getElementById("distance").innerText = "Recherche...";
 
-  // NE PAS modifier le tableau original
+  // 10 plus proches à vol d’oiseau
   const candidats = [...bancs]
     .sort((a,b) => map.distance(userLatLng, a) - map.distance(userLatLng, b))
-    .slice(0,5);
+    .slice(0,10);
 
-  let bestRoute = null;
-  let bestDistance = Infinity;
+  // Construire la liste de coordonnées
+  const coords = [
+    `${userLatLng.lng},${userLatLng.lat}`,
+    ...candidats.map(b => `${b.lng},${b.lat}`)
+  ].join(";");
 
-  for (let banc of candidats) {
+  try {
 
-    try {
+    const tableUrl =
+      `https://router.project-osrm.org/table/v1/foot/${coords}?sources=0`;
 
-      const url =
-        `https://router.project-osrm.org/route/v1/foot/` +
-        `${userLatLng.lng},${userLatLng.lat};` +
-        `${banc.lng},${banc.lat}` +
-        `?overview=full&geometries=geojson`;
+    const res = await fetch(tableUrl);
+    const data = await res.json();
 
-      const res = await fetch(url);
-      const data = await res.json();
+    if (!data.distances) return;
 
-      if (!data.routes) continue;
+    // distances[0] = distances depuis l'utilisateur vers chaque banc
+    const distances = data.distances[0];
 
-      const route = data.routes[0];
-      const dist = route.distance;
+    let min = Infinity;
+    let bestIndex = -1;
 
-      if (dist < bestDistance) {
-        bestDistance = dist;
-        bestRoute = route;
+    for (let i = 1; i < distances.length; i++) {
+      if (distances[i] < min) {
+        min = distances[i];
+        bestIndex = i - 1;
       }
-
-    } catch (e) {
-      console.log("Erreur route", e);
     }
-  }
 
-  if (bestRoute) {
+    if (bestIndex === -1) return;
 
-    if (routeLayer) map.removeLayer(routeLayer);
+    const bestBanc = candidats[bestIndex];
 
-    routeLayer = L.geoJSON(bestRoute.geometry, {
-      style: { color: "#1a73e8", weight: 5 }
-    }).addTo(map);
+    drawRoute(bestBanc, min);
 
-    map.fitBounds(routeLayer.getBounds(), { padding: [50,50] });
-
-    document.getElementById("distance").innerText =
-      Math.round(bestDistance) + " m";
+  } catch (e) {
+    console.log("Erreur table", e);
   }
 };
-
 // =======================
 // DRAW ROUTE
 // =======================
