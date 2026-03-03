@@ -97,13 +97,7 @@ map.on("locationfound", e => {
 // RECENTER
 // =======================
 
-document.getElementById("recenterBtn").onclick = () => {
-  if (userLatLng) map.setView(userLatLng, 17);
-};
-
-// =======================
-// FIND NEAREST (RAPIDE)
-// =======================
+const ORS_API_KEY = "5b3ce3597851110001cf6248578d54540441499fbbd75d50340a9c02";
 
 document.getElementById("findBtn").onclick = async () => {
 
@@ -113,37 +107,48 @@ document.getElementById("findBtn").onclick = async () => {
 
   const candidats = [...bancs]
     .sort((a,b) => map.distance(userLatLng, a) - map.distance(userLatLng, b))
-    .slice(0,6); // 6 max pour rester rapide
+    .slice(0,6);
 
   let bestRoute = null;
   let bestDistance = Infinity;
 
-  await Promise.all(candidats.map(async (banc) => {
+  for (let banc of candidats) {
 
     try {
 
-      const url =
-        `https://router.project-osrm.org/route/v1/foot/` +
-        `${userLatLng.lng},${userLatLng.lat};` +
-        `${banc.lng},${banc.lat}?overview=full&geometries=geojson`;
+      const response = await fetch(
+        "https://api.openrouteservice.org/v2/directions/foot-walking/geojson",
+        {
+          method: "POST",
+          headers: {
+            "Authorization": ORS_API_KEY,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            coordinates: [
+              [userLatLng.lng, userLatLng.lat],
+              [banc.lng, banc.lat]
+            ]
+          })
+        }
+      );
 
-      const res = await fetch(url);
-      const data = await res.json();
+      const data = await response.json();
 
-      if (!data.routes) return;
+      if (!data.features) continue;
 
-      const route = data.routes[0];
+      const route = data.features[0];
+      const distance = route.properties.summary.distance;
 
-      if (route.distance < bestDistance) {
-        bestDistance = route.distance;
+      if (distance < bestDistance) {
+        bestDistance = distance;
         bestRoute = route;
       }
 
-    } catch(e) {
-      console.log("route error", e);
+    } catch (e) {
+      console.log("ORS error", e);
     }
-
-  }));
+  }
 
   if (!bestRoute) {
     document.getElementById("distance").innerText = "Aucun accès";
