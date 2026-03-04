@@ -133,20 +133,29 @@ map.on('zoomend', updateMarkersStyle);
 
 
 // =======================
-// GEOLOC
+// GEOLOC AMÉLIORÉE
 // =======================
 
-map.locate({
-  watch: true,
-  enableHighAccuracy: true
-});
+// Fonction pour démarrer la surveillance
+function startLocating() {
+  map.locate({
+    watch: true,
+    enableHighAccuracy: true,
+    setView: false // On ne veut pas que la carte bouge toute seule sans arrêt
+  });
+}
 
 map.on("locationfound", e => {
-
   userLatLng = e.latlng;
+  
+  // Activer le bouton si il était désactivé
+const findBtn = document.getElementById("findBtn");
+if (findBtn.disabled) {
+    findBtn.disabled = false;
+    findBtn.querySelector("span").innerText = "Trouver un banc";
+}
 
   if (!userMarker) {
-
     userMarker = L.circleMarker(e.latlng, {
       radius: 7,
       fillColor: "#1a73e8",
@@ -161,14 +170,74 @@ map.on("locationfound", e => {
       fillOpacity: 0.1,
       weight: 0
     }).addTo(map);
-
   } else {
     userMarker.setLatLng(e.latlng);
     accuracyCircle.setLatLng(e.latlng);
     accuracyCircle.setRadius(e.accuracy);
   }
 
+  // LOGIQUE DE RÉDUCTION DU TRAJET (Calcul local)
+  updateRouteProgress(e.latlng);
 });
+
+map.on("locationerror", () => {
+  console.log("GPS non disponible, nouvelle tentative dans 5s...");
+  setTimeout(startLocating, 5000); // Réessaie automatiquement
+});
+
+startLocating();
+
+// =======================
+// RÉDUCTION DYNAMIQUE DU TRAJET
+// =======================
+
+function updateRouteProgress(currentPos) {
+  if (!routeLayer) return;
+
+  routeLayer.eachLayer(layer => {
+    if (layer instanceof L.Polyline) {
+      let coords = layer.getLatLngs();
+      if (coords.length < 2) return;
+
+      // 1. On cherche si on a dépassé des points (seuil 15m)
+      let startIndex = 0;
+      for (let i = 0; i < coords.length; i++) {
+        if (currentPos.distanceTo(coords[i]) < 15) {
+          startIndex = i;
+        }
+      }
+
+      // 2. On nettoie les points passés
+      if (startIndex > 0) {
+        coords.splice(0, startIndex);
+      }
+
+      // 3. L'ASTUCE : On force le premier point à être ta position GPS
+      // Cela crée l'effet "élastique" si tu t'éloignes
+      coords[0] = currentPos;
+
+      // 4. On met à jour le dessin
+      layer.setLatLngs(coords);
+      
+      // 5. Mise à jour de la distance en temps réel
+      const remainingDist = calculateRouteDistance(coords);
+      document.getElementById("distance").innerText = Math.round(remainingDist) + " m";
+    }
+  });
+}
+
+// Calcule la distance totale d'un tableau de coordonnées
+function calculateRouteDistance(latlngs) {
+    let total = 0;
+    for (let i = 0; i < latlngs.length - 1; i++) {
+        total += latlngs[i].distanceTo(latlngs[i+1]);
+    }
+    return total;
+}
+
+
+
+
 
 // =======================
 // LOGIQUE DU BOUTON RECENTER
