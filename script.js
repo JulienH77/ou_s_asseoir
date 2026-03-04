@@ -3,7 +3,7 @@ const map = L.map('map', { zoomControl: false, attributionControl: false })
 
 L.tileLayer(
   'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  { maxZoom: 20 }
+  { maxZoom: 19 }
 ).addTo(map);
 
 /*L.control.zoom({ position: 'topright' }).addTo(map);*/
