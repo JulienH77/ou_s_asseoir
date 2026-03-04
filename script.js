@@ -1,4 +1,4 @@
-const map = L.map('map', { zoomControl: false })
+const map = L.map('map', { zoomControl: false, attributionControl: false })
   .setView([48.112, 5.14], 15);
 
 L.tileLayer(
@@ -6,7 +6,7 @@ L.tileLayer(
   { maxZoom: 20 }
 ).addTo(map);
 
-L.control.zoom({ position: 'topright' }).addTo(map);
+/*L.control.zoom({ position: 'topright' }).addTo(map);*/
 
 let userLatLng = null;
 let userMarker = null;
