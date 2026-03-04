@@ -1,6 +1,6 @@
 {
-  "name": "Mon App Carto",
-  "short_name": "CartoApp",
+  "name": "Où s'asseoir",
+  "short_name": "Ou_s_asseoir",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#ffffff",
