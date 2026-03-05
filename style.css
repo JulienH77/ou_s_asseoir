@@ -48,7 +48,7 @@ html, body {
 /* --- Panneau d'Interface Utilisateur (UI) --- */
 #ui-panel {
   position: fixed;
-  bottom: 5px;
+  bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 40px);
