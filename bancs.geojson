@@ -339,7 +339,6 @@
 { "type": "Feature", "properties": { "id": null, "TYPE": "simple dossier" }, "geometry": { "type": "Point", "coordinates": [ 5.134696004711998, 48.111462342530046 ] } },
 { "type": "Feature", "properties": { "id": null, "TYPE": "simple dossier" }, "geometry": { "type": "Point", "coordinates": [ 5.13501476124455, 48.111632989171305 ] } },
 { "type": "Feature", "properties": { "id": null, "TYPE": "simple dossier" }, "geometry": { "type": "Point", "coordinates": [ 5.135002130236167, 48.111736769114849 ] } },
-{ "type": "Feature", "properties": { "id": null, "TYPE": "simple" }, "geometry": null },
 { "type": "Feature", "properties": { "id": null, "TYPE": "simple" }, "geometry": { "type": "Point", "coordinates": [ 5.135002225060663, 48.111930743822079 ] } },
 { "type": "Feature", "properties": { "id": null, "TYPE": "simple dossier" }, "geometry": { "type": "Point", "coordinates": [ 5.135316200629556, 48.111776555193345 ] } },
 { "type": "Feature", "properties": { "id": null, "TYPE": "simple" }, "geometry": { "type": "Point", "coordinates": [ 5.133404233224961, 48.110805257114208 ] } },
