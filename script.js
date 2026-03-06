@@ -3,33 +3,26 @@ const map = L.map('map', {
   attributionControl: false
 }).setView([48.112, 5.14], 15);
 
-// Couches de tuiles
-
-const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19});
-
-const osmHOT = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', { maxZoom: 19});
+// Définition des couches
+const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
+const osmHOT = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', { maxZoom: 19 });
+const GeoportailFrance_orthos = L.tileLayer('https://data.geopf.fr/wmts?REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE={style}&TILEMATRIXSET=PM&FORMAT={format}&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
+    bounds: [[-75, -180], [81, 180]],
+    minZoom: 2,
+    maxZoom: 19,
+    format: 'image/jpeg',
+    style: 'normal'
+});
 /*
 const osmCAT = L.tileLayer('https://tile.openstreetmap.bzh/ca/{z}/{x}/{y}.png', { maxZoom: 19});
-
 const CartoDB_Positron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 20
 });
-
 const CartoDB_Voyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 20});
-*/
-const GeoportailFrance_orthos = L.tileLayer('https://data.geopf.fr/wmts?REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE={style}&TILEMATRIXSET=PM&FORMAT={format}&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {	bounds: [[-75, -180], [81, 180]], minZoom: 2, maxZoom: 19, format: 'image/jpeg', style: 'normal'});
-
-/*
 const esriTOPO = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {});
-*/
 const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19});
+*/
 
-
-
-// Ajouter la couche par défaut
-osmLayer.addTo(map);
-
-// Contrôle de couches
-/*
+/*// Contrôle de couches
 const baseLayers = {
   "OpenStreetMap": osmLayer,
   "osmHOT": osmHOT,
@@ -43,57 +36,40 @@ const baseLayers = {
 L.control.layers(baseLayers).addTo(map);
 */
 
-// On stocke les couches dans un objet pour y accéder facilement
+// Objet de correspondance (les clés doivent être IDENTIQUES aux noms dans le onclick du HTML)
 const layers = {
-    "Standard": osmHOT,
-    "Hybride": GeoportailFrance_orthos,
-    "Sombre": darkLayer
+    "Standard": osmLayer,
+    "Standard bis": osmHOT,
+    "Satellite": GeoportailFrance_orthos
 };
 
-// Fonction pour afficher/cacher le menu
+// Indispensable : Ajouter la couche initiale
+osmLayer.addTo(map);
+
 function toggleMenu() {
     document.getElementById('map-style-menu').classList.toggle('hidden');
 }
 
-// Fonction pour changer la couche
 function changeLayer(name, element) {
-    // 1. Retirer toutes les couches de base de la carte
-    Object.values(layers).forEach(layer => map.removeLayer(layer));
+    // Retirer les couches existantes
+    Object.values(layers).forEach(layer => {
+        if (map.hasLayer(layer)) {
+            map.removeLayer(layer);
+        }
+    });
     
-    // 2. Ajouter la couche sélectionnée
-    layers[name].addTo(map);
+    // Ajouter la nouvelle
+    if (layers[name]) {
+        layers[name].addTo(map);
+    }
     
-    // 3. Gérer l'UI (bordure bleue)
+    // Mise à jour visuelle
     document.querySelectorAll('.style-option').forEach(el => el.classList.remove('active'));
     element.classList.add('active');
     
-    // 4. Fermer le menu sur mobile après sélection
+    // Fermeture automatique
     toggleMenu();
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /*L.control.zoom({ position: 'topright' }).addTo(map);*/
