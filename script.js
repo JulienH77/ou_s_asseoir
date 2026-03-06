@@ -38,7 +38,7 @@ const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x
 osmLayer.addTo(map);
 
 // Contrôle de couches
-const baseLayers = {
+/*const baseLayers = {
   "OpenStreetMap": osmLayer,
   "osmHOT": osmHOT,
   "osmCAT": osmCAT,
@@ -49,10 +49,35 @@ const baseLayers = {
   "Fond sombre": darkLayer
 };
 L.control.layers(baseLayers).addTo(map);
+*/
 
+// On stocke les couches dans un objet pour y accéder facilement
+const layers = {
+    "Standard": osmLayer,
+    "Hybride": GeoportailFrance_orthos,
+    "Sombre": darkLayer
+};
 
+// Fonction pour afficher/cacher le menu
+function toggleMenu() {
+    document.getElementById('map-style-menu').classList.toggle('hidden');
+}
 
-
+// Fonction pour changer la couche
+function changeLayer(name, element) {
+    // 1. Retirer toutes les couches de base de la carte
+    Object.values(layers).forEach(layer => map.removeLayer(layer));
+    
+    // 2. Ajouter la couche sélectionnée
+    layers[name].addTo(map);
+    
+    // 3. Gérer l'UI (bordure bleue)
+    document.querySelectorAll('.style-option').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+    
+    // 4. Fermer le menu sur mobile après sélection
+    toggleMenu();
+}
 
 
 
