@@ -38,7 +38,7 @@ const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x
 osmLayer.addTo(map);
 
 // Contrôle de couches
-/*const baseLayers = {
+const baseLayers = {
   "OpenStreetMap": osmLayer,
   "osmHOT": osmHOT,
   "osmCAT": osmCAT,
@@ -49,7 +49,7 @@ osmLayer.addTo(map);
   "Fond sombre": darkLayer
 };
 L.control.layers(baseLayers).addTo(map);
-*/
+
 
 // On stocke les couches dans un objet pour y accéder facilement
 const layers = {
