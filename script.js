@@ -133,6 +133,11 @@ fetch("bancs.geojson")
 .then(res => res.json())
 .then(data => {
   data.features.forEach(f => {
+    if (!f.geometry || !f.geometry.coordinates) {
+        console.warn("Banc ignoré car il n'a pas de coordonnées :", f);
+        return; 
+    }
+
     const typeRaw = f.properties.TYPE || "autre";
     const t = typeRaw.toLowerCase();
 
@@ -246,9 +251,18 @@ if (findBtn.disabled) {
   updateRouteProgress(e.latlng);
 });
 
-map.on("locationerror", () => {
-  console.log("GPS non disponible, nouvelle tentative dans 5s...");
-  setTimeout(startLocating, 5000); // Réessaie automatiquement
+map.on("locationerror", (e) => {
+  console.warn("Erreur GPS :", e.message);
+  
+  // Si l'utilisateur ou le navigateur a refusé la permission (Code 1)
+  if (e.code === 1) {
+    alert("L'accès au GPS est bloqué. Modifiez les permissions de votre navigateur pour utiliser cette fonction.");
+    document.getElementById("findBtn").querySelector("span").innerText = "GPS bloqué";
+  } else {
+    // Pour les autres erreurs (signal faible, etc.), on réessaie
+    console.log("Nouvelle tentative dans 5s...");
+    setTimeout(startLocating, 5000);
+  }
 });
 
 startLocating();
@@ -265,10 +279,10 @@ function updateRouteProgress(currentPos) {
       let coords = layer.getLatLngs();
       if (coords.length < 2) return;
 
-      // 1. On cherche si on a dépassé des points (seuil 15m)
+      // 1. On cherche si on a dépassé des points (seuil 5m)
       let startIndex = 0;
       for (let i = 0; i < coords.length; i++) {
-        if (currentPos.distanceTo(coords[i]) < 15) {
+        if (currentPos.distanceTo(coords[i]) < 5) {
           startIndex = i;
         }
       }
