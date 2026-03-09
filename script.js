@@ -430,6 +430,8 @@ document.getElementById("findBtn").onclick = async () => {
 };*/
 const ORS_API_KEY = "5b3ce3597851110001cf6248578d54540441499fbbd75d50340a9c02";
 
+
+
 findBtn.addEventListener("click", async () => {
   if (!userLatLng || bancs.length === 0) {
     alert("Position ou données des bancs non disponibles.");
@@ -439,10 +441,10 @@ findBtn.addEventListener("click", async () => {
   document.getElementById("distance").innerText = "Recherche...";
   findBtn.disabled = true;
 
-  // On trie par distance "oiseau" pour ne tester que les 3 plus proches techniquement
+  // On trie les bancs par distance "à vol d'oiseau" (plus rapide)
   const candidats = [...bancs]
     .sort((a, b) => userLatLng.distanceTo(a) - userLatLng.distanceTo(b))
-    .slice(0, 3);
+    .slice(0, 3); // On ne demande l'itinéraire que pour les 3 plus proches
 
   let bestRoute = null;
   let bestDistance = Infinity;
@@ -458,17 +460,22 @@ findBtn.addEventListener("click", async () => {
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            coordinates: [[userLatLng.lng, userLatLng.lat], [banc.lng, banc.lat]]
+            coordinates: [
+              [userLatLng.lng, userLatLng.lat],
+              [banc.lng, banc.lat]
+            ]
           })
         }
       );
 
-      if (!response.ok) continue; // Si erreur API, on passe au suivant
+      if (!response.ok) continue;
 
       const data = await response.json();
+      
       if (data.features && data.features.length > 0) {
         const route = data.features[0];
         const dist = route.properties.summary.distance;
+        
         if (dist < bestDistance) {
           bestDistance = dist;
           bestRoute = route;
@@ -476,25 +483,40 @@ findBtn.addEventListener("click", async () => {
       }
     }
 
-    if (bestRoute) {
-      if (routeLayer) map.removeLayer(routeLayer);
-      routeLayer = L.geoJSON(bestRoute.geometry, {
-        style: { color: "#1a73e8", weight: 5 }
+    if (bestRoute && bestRoute.geometry) {
+      // NETTOYAGE de l'ancien tracé
+      if (routeLayer) {
+        map.removeLayer(routeLayer);
+      }
+
+      // CRÉATION du nouveau tracé avec sécurité
+      routeLayer = L.geoJSON(bestRoute, {
+        style: { 
+            color: "#1a73e8", 
+            weight: 5,
+            opacity: 0.8
+        }
       }).addTo(map);
 
+      // Zoom sur le trajet
       map.fitBounds(routeLayer.getBounds(), { padding: [40, 40] });
+      
       document.getElementById("distance").innerText = Math.round(bestDistance) + " m";
     } else {
       document.getElementById("distance").innerText = "Aucun accès";
     }
+
   } catch (err) {
-    console.error("Erreur itinéraire:", err);
-    document.getElementById("distance").innerText = "Erreur réseau";
+    console.error("Erreur itinéraire détaillée:", err);
+    document.getElementById("distance").innerText = "Erreur itinéraire";
   } finally {
-    // TRES IMPORTANT : on réactive toujours le bouton à la fin
     findBtn.disabled = false;
   }
 });
+
+
+
+
 
 // =======================
 // DRAW ROUTE
