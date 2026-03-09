@@ -574,7 +574,7 @@ function openStats() {
                 <span class="stat-title">Total des bancs référencés</span>
                 <span class="stat-value" style="color: var(--primary-color);">${statsBancs.total}</span>
             </div>
-            <div style="font-size: 32px;">🪑</div>
+            <div style="font-size: 32px;"></div>
         </div>
 
         <h3 class="section-title">Répartition par confort</h3>
@@ -617,7 +617,7 @@ function openStats() {
                     <span class="stat-title">Bancs à moins de 250m</span>
                     <span class="stat-value">${aMoinsDe250m}</span>
                 </div>
-                <div style="font-size: 24px;">🚶</div>
+                <div style="font-size: 24px;"></div>
             </div>
             <div class="stat-card">
                 <div class="stat-info">
