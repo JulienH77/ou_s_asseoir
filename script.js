@@ -233,15 +233,17 @@ function startLocating() {
 }
 
 map.on("locationfound", e => {
+  if (!e.latlng) return; // Sécurité : si pas de coordonnées, on stoppe
+  
   userLatLng = e.latlng;
   
-  // Activer le bouton si il était désactivé
-const findBtn = document.getElementById("findBtn");
-if (findBtn.disabled) {
-    findBtn.disabled = false;
-    findBtn.querySelector("span").innerText = "Trouver un banc";
-}
+  const findBtn = document.getElementById("findBtn");
+  if (findBtn && findBtn.disabled) {
+      findBtn.disabled = false;
+      findBtn.querySelector("span").innerText = "Trouver un banc";
+  }
 
+  // Si le marqueur n'existe pas encore, on le crée
   if (!userMarker) {
     userMarker = L.circleMarker(e.latlng, {
       radius: 7,
@@ -252,18 +254,21 @@ if (findBtn.disabled) {
     }).addTo(map);
 
     accuracyCircle = L.circle(e.latlng, {
-      radius: e.accuracy,
+      radius: e.accuracy || 0,
       fillColor: "#1a73e8",
       fillOpacity: 0.1,
       weight: 0
     }).addTo(map);
   } else {
+    // Si il existe, on met à jour proprement
     userMarker.setLatLng(e.latlng);
-    accuracyCircle.setLatLng(e.latlng);
-    accuracyCircle.setRadius(e.accuracy);
+    if (accuracyCircle) {
+        accuracyCircle.setLatLng(e.latlng);
+        accuracyCircle.setRadius(e.accuracy || 0);
+    }
   }
 
-  // LOGIQUE DE RÉDUCTION DU TRAJET (Calcul local)
+  // Mise à jour du trajet seulement si on bouge de plus de 2 mètres
   updateRouteProgress(e.latlng);
 });
 
@@ -426,23 +431,24 @@ document.getElementById("findBtn").onclick = async () => {
 const ORS_API_KEY = "5b3ce3597851110001cf6248578d54540441499fbbd75d50340a9c02";
 
 findBtn.addEventListener("click", async () => {
-
-  if (!userLatLng) return;
+  if (!userLatLng || bancs.length === 0) {
+    alert("Position ou données des bancs non disponibles.");
+    return;
+  }
 
   document.getElementById("distance").innerText = "Recherche...";
   findBtn.disabled = true;
 
+  // On trie par distance "oiseau" pour ne tester que les 3 plus proches techniquement
   const candidats = [...bancs]
-    .sort((a,b) => map.distance(userLatLng, a) - map.distance(userLatLng, b))
-    .slice(0,3); // 3 au lieu de 6
+    .sort((a, b) => userLatLng.distanceTo(a) - userLatLng.distanceTo(b))
+    .slice(0, 3);
 
   let bestRoute = null;
   let bestDistance = Infinity;
 
-  for (let banc of candidats) {
-
-    try {
-
+  try {
+    for (let banc of candidats) {
       const response = await fetch(
         "https://api.openrouteservice.org/v2/directions/foot-walking/geojson",
         {
@@ -452,49 +458,42 @@ findBtn.addEventListener("click", async () => {
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            coordinates: [
-              [userLatLng.lng, userLatLng.lat],
-              [banc.lng, banc.lat]
-            ]
+            coordinates: [[userLatLng.lng, userLatLng.lat], [banc.lng, banc.lat]]
           })
         }
       );
 
+      if (!response.ok) continue; // Si erreur API, on passe au suivant
+
       const data = await response.json();
-
-      if (!data.features) continue;
-
-      const route = data.features[0];
-      const distance = route.properties.summary.distance;
-
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestRoute = route;
+      if (data.features && data.features.length > 0) {
+        const route = data.features[0];
+        const dist = route.properties.summary.distance;
+        if (dist < bestDistance) {
+          bestDistance = dist;
+          bestRoute = route;
+        }
       }
-
-    } catch (e) {
-      console.log("ORS error", e);
     }
-  }
 
-  if (!bestRoute) {
-    document.getElementById("distance").innerText = "Aucun accès";
+    if (bestRoute) {
+      if (routeLayer) map.removeLayer(routeLayer);
+      routeLayer = L.geoJSON(bestRoute.geometry, {
+        style: { color: "#1a73e8", weight: 5 }
+      }).addTo(map);
+
+      map.fitBounds(routeLayer.getBounds(), { padding: [40, 40] });
+      document.getElementById("distance").innerText = Math.round(bestDistance) + " m";
+    } else {
+      document.getElementById("distance").innerText = "Aucun accès";
+    }
+  } catch (err) {
+    console.error("Erreur itinéraire:", err);
+    document.getElementById("distance").innerText = "Erreur réseau";
+  } finally {
+    // TRES IMPORTANT : on réactive toujours le bouton à la fin
     findBtn.disabled = false;
-    return;
   }
-
-  if (routeLayer) map.removeLayer(routeLayer);
-
-  routeLayer = L.geoJSON(bestRoute.geometry, {
-    style: { color: "#1a73e8", weight: 5 }
-  }).addTo(map);
-
-  map.fitBounds(routeLayer.getBounds(), { padding: [40,40] });
-
-  document.getElementById("distance").innerText =
-    Math.round(bestDistance) + " m";
-
-  findBtn.disabled = false;
 });
 
 // =======================
