@@ -79,6 +79,14 @@ let userMarker = null;
 let accuracyCircle = null;
 let routeLayer = null;
 let bancs = [];
+let statsBancs = {
+    total: 0,
+    dossier: 0,
+    standard: 0,
+    detente: 0,
+    autre: 0
+};
+
 
 // =======================
 // CONFIGURATION DES TYPES (Groupés par confort)
@@ -134,7 +142,6 @@ fetch("bancs.geojson")
 .then(data => {
   data.features.forEach(f => {
     if (!f.geometry || !f.geometry.coordinates) {
-        console.warn("Banc ignoré car il n'a pas de coordonnées :", f);
         return; 
     }
 
@@ -142,6 +149,15 @@ fetch("bancs.geojson")
     const t = typeRaw.toLowerCase();
 
     if (t.includes("bus")) return;
+
+    // --- NOUVEAU : Comptage pour les statistiques ---
+    statsBancs.total++;
+    const color = getBenchColor(typeRaw);
+    if (color === TYPE_COLORS["dossier"]) statsBancs.dossier++;
+    else if (color === TYPE_COLORS["standard"]) statsBancs.standard++;
+    else if (color === TYPE_COLORS["detente"]) statsBancs.detente++;
+    else statsBancs.autre++;
+    // ------------------------------------------------
 
     const latlng = [f.geometry.coordinates[1], f.geometry.coordinates[0]];
     const color = getBenchColor(typeRaw);
@@ -504,4 +520,103 @@ function drawRoute(dest, distance) {
     document.getElementById("distance").innerText =
       Math.round(distance) + " m";
   });
+}
+
+
+
+
+
+// =======================
+// STATISTIQUES
+// =======================
+
+function openStats() {
+    const modal = document.getElementById('stats-modal');
+    const container = document.getElementById('stats-container');
+    
+    // Calcul de la distance des bancs par rapport à l'utilisateur
+    let aMoinsDe250m = 0;
+    let aMoinsDe500m = 0;
+    
+    if (userLatLng) {
+        bancs.forEach(b => {
+            const dist = map.distance(userLatLng, b);
+            if (dist <= 250) aMoinsDe250m++;
+            if (dist <= 500) aMoinsDe500m++;
+        });
+    }
+
+    // Génération du contenu HTML de la popup
+    let html = `
+        <div class="stat-card">
+            <div class="stat-info">
+                <span class="stat-title">Total des bancs référencés</span>
+                <span class="stat-value" style="color: var(--primary-color);">${statsBancs.total}</span>
+            </div>
+            <div style="font-size: 32px;">🪑</div>
+        </div>
+
+        <h3 class="section-title">Répartition par confort</h3>
+
+        <div class="stat-card" style="border-left: 4px solid ${TYPE_COLORS['dossier']};">
+            <div class="stat-info">
+                <span class="stat-title">Avec dossier (Confort)</span>
+                <span class="stat-value">${statsBancs.dossier}</span>
+            </div>
+        </div>
+        
+        <div class="stat-card" style="border-left: 4px solid ${TYPE_COLORS['standard']};">
+            <div class="stat-info">
+                <span class="stat-title">Sans dossier (Classique)</span>
+                <span class="stat-value">${statsBancs.standard}</span>
+            </div>
+        </div>
+
+        <div class="stat-card" style="border-left: 4px solid ${TYPE_COLORS['detente']};">
+            <div class="stat-info">
+                <span class="stat-title">Transats (Détente)</span>
+                <span class="stat-value">${statsBancs.detente}</span>
+            </div>
+        </div>
+
+        <div class="stat-card" style="border-left: 4px solid ${TYPE_COLORS['autre']};">
+            <div class="stat-info">
+                <span class="stat-title">Pierres / Autres</span>
+                <span class="stat-value">${statsBancs.autre}</span>
+            </div>
+        </div>
+    `;
+
+    // Si on a la position GPS, on affiche les stats de proximité
+    if (userLatLng) {
+        html += `
+            <h3 class="section-title">Autour de vous</h3>
+            <div class="stat-card">
+                <div class="stat-info">
+                    <span class="stat-title">Bancs à moins de 250m</span>
+                    <span class="stat-value">${aMoinsDe250m}</span>
+                </div>
+                <div style="font-size: 24px;">🚶</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-info">
+                    <span class="stat-title">Bancs à moins de 500m</span>
+                    <span class="stat-value">${aMoinsDe500m}</span>
+                </div>
+            </div>
+        `;
+    } else {
+        html += `
+            <div class="stat-card" style="background-color: #e8f0fe; justify-content: center; text-align: center; margin-top: 10px;">
+                <span class="stat-title" style="color: var(--primary-color);">Activez le GPS pour voir les bancs proches de vous !</span>
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+    modal.classList.remove('hidden');
+}
+
+function closeStats() {
+    document.getElementById('stats-modal').classList.add('hidden');
 }

@@ -1,74 +1,90 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Où s'asseoir - Chaumont</title>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+		<title>Où s'asseoir - Chaumont</title>
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-    <link rel="stylesheet" href="style.css">
+		<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+		<link rel="stylesheet" href="style.css">
 
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#2c3e50">
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js');
-        });
-      }
-    </script>    
-</head>
-<body>
-    
-    <div id="map"></div>
+		<link rel="manifest" href="manifest.json">
+		<meta name="theme-color" content="#2c3e50">
+		<script>
+		  if ('serviceWorker' in navigator) {
+			window.addEventListener('load', () => {
+			  navigator.serviceWorker.register('./sw.js');
+			});
+		  }
+		</script>    
+	</head>
+	<body>
+		<div id="map"></div>
 
-
-<div id="map-style-wrapper">
-    <button id="map-style-toggle" onclick="toggleMenu()">
-        <img src="https://cdn-icons-png.flaticon.com/512/68/68826.png" width="25">
-    </button>
-
-    <div id="map-style-menu" class="hidden">
-        <div class="style-option active" onclick="changeLayer('Standard', this)">
-            <img src="https://a.tile.openstreetmap.org/15/16544/11186.png" alt="Standard">
-            <span>Standard</span>
-        </div>
-        
-        <div class="style-option" onclick="changeLayer('Standard bis', this)">
-            <img src="https://a.tile.openstreetmap.fr/hot/15/16544/11186.png" alt="Standard Bis">
-            <span>Standard bis</span>
-        </div>
-
-        <div class="style-option" onclick="changeLayer('Satellite', this)">
-            <img src="https://data.geopf.fr/wmts?REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&TILEMATRIX=15&TILEROW=11186&TILECOL=16544" alt="Satellite">
-            <span>Satellite</span>
-        </div>
-    </div>
-</div>
-
-
-    <div id="ui-panel">
-        <div class="ui-header">
-            <h1>Où s'asseoir</h1>
-            <div id="distance">-- m</div>
-        </div>
-        <div class="ui-controls">
-			<button id="findBtn" class="btn-primary" disabled>
-				<span>Attente GPS...</span>
+		<div id="map-style-wrapper">
+			<button id="map-style-toggle" onclick="toggleMenu()">
+				<img src="https://cdn-icons-png.flaticon.com/512/68/68826.png" width="25">
 			</button>
-            <button id="recenterBtn" class="btn-secondary" title="Recentrer sur ma position">
-                <svg viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
-            </button>
-        </div>
-        <div class="ui-legend">
-            <div class="legend-item"><span class="dot" style="background:#1a73e8"></span> Avec dossier</div>
-            <div class="legend-item"><span class="dot" style="background:#34a853"></span> Sans dossier</div>
-            <div class="legend-item"><span class="dot" style="background:#fbbc04"></span> Transat</div>
-            <div class="legend-item"><span class="dot" style="background:#70757a"></span> Autre / Pierre</div>
-        </div>
-    </div>
+			
+			<button id="stats-toggle" onclick="openStats()" title="Statistiques">
+				<svg viewBox="0 0 24 24" width="25" height="25" fill="#333"><path d="M10 20h4V4h-4v16zm-6 0h4v-8H4v8zM16 9v11h4V9h-4z"/></svg>
+			</button>
 
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="script.js"></script>
-</body>
+
+			<div id="map-style-menu" class="hidden">
+				<div class="style-option active" onclick="changeLayer('Standard', this)">
+					<img src="https://a.tile.openstreetmap.org/15/16544/11186.png" alt="Standard">
+					<span>Standard</span>
+				</div>
+				
+				<div class="style-option" onclick="changeLayer('Standard bis', this)">
+					<img src="https://a.tile.openstreetmap.fr/hot/15/16544/11186.png" alt="Standard Bis">
+					<span>Standard bis</span>
+				</div>
+
+				<div class="style-option" onclick="changeLayer('Satellite', this)">
+					<img src="https://data.geopf.fr/wmts?REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&TILEMATRIX=15&TILEROW=11186&TILECOL=16544" alt="Satellite">
+					<span>Satellite</span>
+				</div>
+			</div>
+		</div>
+
+
+		<div id="ui-panel">
+			<div class="ui-header">
+				<h1>Où s'asseoir</h1>
+				<div id="distance">-- m</div>
+			</div>
+			<div class="ui-controls">
+				<button id="findBtn" class="btn-primary" disabled>
+					<span>Attente GPS...</span>
+				</button>
+				<button id="recenterBtn" class="btn-secondary" title="Recentrer sur ma position">
+					<svg viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
+				</button>
+			</div>
+			<div class="ui-legend">
+				<div class="legend-item"><span class="dot" style="background:#1a73e8"></span> Avec dossier</div>
+				<div class="legend-item"><span class="dot" style="background:#34a853"></span> Sans dossier</div>
+				<div class="legend-item"><span class="dot" style="background:#fbbc04"></span> Transat</div>
+				<div class="legend-item"><span class="dot" style="background:#70757a"></span> Autre / Pierre</div>
+			</div>
+		</div>
+
+		<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+		<script src="script.js"></script>
+	
+	
+		<div id="stats-modal" class="hidden">
+			<div class="stats-header">
+				<h2>Statistiques</h2>
+				<button class="close-btn" onclick="closeStats()">✕</button>
+			</div>
+			<div class="stats-content" id="stats-container">
+				</div>
+		</div>
+
+		<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+		<script src="script.js"></script>
+	</body>
 </html>

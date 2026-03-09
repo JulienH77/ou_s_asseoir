@@ -277,3 +277,110 @@ button:active {
 .style-option.active img {
     border-color: #007AFF; /* Bleu style iOS */
 }
+
+
+
+
+/* pour le bouton stat */
+/* --- Bouton Statistiques --- */
+#stats-toggle {
+    background: white;
+    border: none;
+    padding: 8px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    cursor: pointer;
+    float: right;
+    clear: both;
+    margin-top: 10px; /* Espace sous le bouton de carte */
+}
+
+/* --- Popup Plein Écran (Mobile First) --- */
+#stats-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-panel);
+    z-index: 9999; /* Par-dessus tout le reste */
+    display: flex;
+    flex-direction: column;
+}
+
+.stats-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #f1f3f4;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.stats-header h2 {
+    margin: 0;
+    font-size: 20px;
+    color: var(--text-main);
+}
+
+.close-btn {
+    background: #f1f3f4;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.stats-content {
+    padding: 20px;
+    overflow-y: auto;
+    flex-grow: 1;
+    background-color: #f8f9fa;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* --- Cartes de statistiques --- */
+.stat-card {
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stat-title {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--text-main);
+}
+
+.section-title {
+    margin: 10px 0 0 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
