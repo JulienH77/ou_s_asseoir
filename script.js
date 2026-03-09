@@ -150,17 +150,17 @@ fetch("bancs.geojson")
 
     if (t.includes("bus")) return;
 
-    // --- NOUVEAU : Comptage pour les statistiques ---
-    statsBancs.total++;
+    // On calcule la couleur
     const color = getBenchColor(typeRaw);
+
+    // --- Comptage pour les statistiques ---
+    statsBancs.total++;
     if (color === TYPE_COLORS["dossier"]) statsBancs.dossier++;
     else if (color === TYPE_COLORS["standard"]) statsBancs.standard++;
     else if (color === TYPE_COLORS["detente"]) statsBancs.detente++;
     else statsBancs.autre++;
-    // ------------------------------------------------
 
     const latlng = [f.geometry.coordinates[1], f.geometry.coordinates[0]];
-    const color = getBenchColor(typeRaw);
     
     // Déterminer la priorité d'affichage
     let priority = 100; // Par défaut
@@ -169,7 +169,7 @@ fetch("bancs.geojson")
 
     const marker = L.marker(latlng, { 
       icon: createBenchIcon(color),
-      zIndexOffset: priority // <--- Ajout du zIndex
+      zIndexOffset: priority
     }).bindPopup(`${typeRaw}`);
     
     // On stocke le type dans le marqueur pour l'utiliser dans le style
