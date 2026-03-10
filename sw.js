@@ -1,5 +1,5 @@
 // On change la version ici à chaque grosse mise à jour !
-const cacheName = 'carto-v5'; 
+const cacheName = 'carto-v6'; 
 const assets = [
   './',
   './index.html',
