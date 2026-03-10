@@ -81,6 +81,7 @@ let routeLayer = null;
 let bancs = [];
 let statsBancs = {
     total: 0,
+    places: 0,
     dossier: 0,
     standard: 0,
     detente: 0,
@@ -155,6 +156,12 @@ fetch("bancs.geojson")
 
     // --- Comptage pour les statistiques ---
     statsBancs.total++;
+    
+    // Ajout du compteur de places (si la valeur existe et n'est pas null)
+    if (f.properties.PLACE) {
+        statsBancs.places += f.properties.PLACE;
+    }
+
     if (color === TYPE_COLORS["dossier"]) statsBancs.dossier++;
     else if (color === TYPE_COLORS["standard"]) statsBancs.standard++;
     else if (color === TYPE_COLORS["detente"]) statsBancs.detente++;
@@ -167,10 +174,16 @@ fetch("bancs.geojson")
     if (t === "autre" || t === "pierre") priority = 10; // Priorité basse
     if (t.includes("dossier")) priority = 200; // Priorité haute
 
+    // Création du texte de la popup avec le nombre de places
+    let popupContent = `<b>${typeRaw.charAt(0).toUpperCase() + typeRaw.slice(1)}</b>`;
+    if (f.properties.PLACE) {
+        popupContent += `<br><i>${f.properties.PLACE} place(s)</i>`;
+    }
+
     const marker = L.marker(latlng, { 
       icon: createBenchIcon(color),
       zIndexOffset: priority
-    }).bindPopup(`${typeRaw}`);
+    }).bindPopup(popupContent);
     
     // On stocke le type dans le marqueur pour l'utiliser dans le style
     marker.typeBench = t; 
@@ -567,16 +580,21 @@ function openStats() {
         });
     }
 
-    // Génération du contenu HTML de la popup
+// Génération du contenu HTML de la popup
     let html = `
         <div class="stat-card">
             <div class="stat-info">
                 <span class="stat-title">Total des bancs référencés</span>
                 <span class="stat-value" style="color: var(--primary-color);">${statsBancs.total}</span>
             </div>
-            <div style="font-size: 32px;"></div>
         </div>
 
+        <div class="stat-card">
+            <div class="stat-info">
+                <span class="stat-title">Capacité d'accueil totale</span>
+                <span class="stat-value" style="color: var(--primary-color);">${statsBancs.places} places</span>
+            </div>
+        </div>
         <h3 class="section-title">Répartition par confort</h3>
 
         <div class="stat-card" style="border-left: 4px solid ${TYPE_COLORS['dossier']};">
